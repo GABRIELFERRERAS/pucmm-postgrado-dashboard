@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PUCMM Postgrado — Centro de Captación</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#060b17;--bg2:#0a1020;--bg3:#0d1627;--bg4:#111d35;
+    --border:#1e3a5f;--border2:#2a4f80;
+    --blue:#4fa3e8;--cyan:#22d3ee;--green:#4ade80;
+    --amber:#fbbf24;--red:#f87171;--purple:#a78bfa;
+    --text:#e2e8f0;--text2:#94a3b8;--text3:#64748b;
+  }
+  html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Courier New',monospace}
+  body{display:flex;flex-direction:column;overflow-x:hidden}
+
+  /* ── TOP BAR ── */
+  #topbar{
+    background:var(--bg2);border-bottom:1px solid var(--border);
+    padding:10px 20px;display:flex;align-items:center;justify-content:space-between;
+    flex-shrink:0;flex-wrap:wrap;gap:8px;position:sticky;top:0;z-index:100
+  }
+  .logo-area{display:flex;align-items:center;gap:12px}
+  .brand-main{font-size:18px;font-weight:700;color:var(--blue);letter-spacing:.1em}
+  .brand-sub{font-size:10px;color:var(--text3);letter-spacing:.12em;text-transform:uppercase}
+  .sys-chips{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .chip{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text3)}
+  .pulse{width:7px;height:7px;border-radius:50%;background:var(--cyan);animation:blink 1.4s infinite}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.15}}
+  #clock{font-size:13px;color:var(--cyan);font-family:'Courier New',monospace}
+
+  /* ── LAYOUT ── */
+  #wrapper{display:flex;flex:1;overflow:hidden}
+  #sidebar{
+    width:200px;flex-shrink:0;background:var(--bg2);
+    border-right:1px solid var(--border);padding:16px 0;
+    display:flex;flex-direction:column;gap:2px;overflow-y:auto
+  }
+  .nav-item{
+    display:flex;align-items:center;gap:10px;padding:10px 18px;
+    font-size:11px;color:var(--text3);cursor:pointer;
+    letter-spacing:.06em;text-transform:uppercase;transition:all .2s;
+    border-left:3px solid transparent
+  }
+  .nav-item:hover{background:var(--bg3);color:var(--text)}
+  .nav-item.active{background:var(--bg3);color:var(--blue);border-left-color:var(--blue)}
+  .nav-icon{font-size:16px;width:18px;text-align:center}
+  #main{flex:1;overflow-y:auto;padding:20px}
+
+  /* ── SETUP SCREEN ── */
+  #setupScreen{
+    max-width:560px;margin:60px auto;
+    background:var(--bg3);border:1px solid var(--border);
+    border-radius:12px;padding:32px
+  }
+  #setupScreen h2{font-size:18px;color:var(--blue);margin-bottom:8px;letter-spacing:.08em}
+  #setupScreen p{font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:20px}
+  .field-label{font-size:10px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+  .field-wrap{margin-bottom:16px}
+  input[type=text],input[type=password]{
+    width:100%;background:var(--bg);border:1px solid var(--border2);
+    border-radius:6px;padding:10px 12px;color:var(--text);font-size:12px;
+    font-family:'Courier New',monospace;outline:none
+  }
+  input[type=text]:focus,input[type=password]:focus{border-color:var(--blue)}
+  .btn-primary{
+    background:var(--blue);color:#fff;border:none;border-radius:6px;
+    padding:11px 22px;font-size:12px;cursor:pointer;font-family:'Courier New',monospace;
+    letter-spacing:.08em;font-weight:700;width:100%;transition:opacity .2s
+  }
+  .btn-primary:hover{opacity:.85}
+  .hint{font-size:10px;color:var(--text3);margin-top:6px;line-height:1.6}
+  .step-badge{
+    display:inline-block;background:var(--bg4);border:1px solid var(--border);
+    border-radius:20px;padding:3px 10px;font-size:10px;color:var(--text3);margin-bottom:20px
+  }
+  .divider{border:none;border-top:1px solid var(--border);margin:20px 0}
+
+  /* ── LOADING ── */
+  #loadingScreen{display:none;text-align:center;padding:80px 20px}
+  .spinner{
+    width:48px;height:48px;border:3px solid var(--border);
+    border-top-color:var(--blue);border-radius:50%;
+    animation:spin .8s linear infinite;margin:0 auto 20px
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+  #loadMsg{font-size:12px;color:var(--text3);letter-spacing:.08em}
+
+  /* ── KPI CARDS ── */
+  .kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:18px}
+  .kpi{
+    background:var(--bg3);border:1px solid var(--border);border-radius:8px;
+    padding:14px 16px;position:relative;overflow:hidden
+  }
+  .kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+  .kpi.c-blue::before{background:var(--blue)}.kpi.c-cyan::before{background:var(--cyan)}
+  .kpi.c-green::before{background:var(--green)}.kpi.c-amber::before{background:var(--amber)}
+  .kpi.c-red::before{background:var(--red)}.kpi.c-purple::before{background:var(--purple)}
+  .kpi-lbl{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px}
+  .kpi-val{font-size:26px;font-weight:700;color:var(--text);line-height:1}
+  .kpi-delta{font-size:10px;margin-top:5px}
+  .delta-up{color:var(--green)}.delta-warn{color:var(--amber)}.delta-down{color:var(--red)}
+
+  /* ── PANELS ── */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px}
+  @media(max-width:900px){.grid2,.grid3{grid-template-columns:1fr}}
+  .panel{
+    background:var(--bg3);border:1px solid var(--border);
+    border-radius:8px;padding:16px
+  }
+  .panel-title{
+    font-size:9px;color:var(--blue);letter-spacing:.15em;
+    text-transform:uppercase;margin-bottom:14px;
+    display:flex;align-items:center;gap:6px
+  }
+  .panel-title::before{content:'';width:3px;height:13px;background:var(--blue);border-radius:2px;display:inline-block}
+
+  /* ── SEMAFORO LIST ── */
+  .sem-filters{display:flex;gap:0;margin-bottom:12px;border-radius:6px;overflow:hidden;border:1px solid var(--border)}
+  .sfbtn{flex:1;padding:6px;font-size:9px;background:var(--bg);color:var(--text3);border:none;cursor:pointer;letter-spacing:.06em;text-transform:uppercase;font-family:'Courier New',monospace;transition:all .2s}
+  .sfbtn.on{background:var(--bg4);color:var(--blue)}
+  .sem-list{display:flex;flex-direction:column;gap:5px;max-height:320px;overflow-y:auto}
+  .sem-item{
+    display:flex;align-items:center;gap:8px;padding:8px 10px;
+    border-radius:6px;background:var(--bg);border:1px solid var(--border);
+    cursor:pointer;transition:all .2s
+  }
+  .sem-item:hover{border-color:var(--blue)}
+  .sem-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+  .dot-g{background:var(--green);box-shadow:0 0 6px #4ade8055}
+  .dot-a{background:var(--amber);box-shadow:0 0 6px #fbbf2455}
+  .dot-r{background:var(--red);box-shadow:0 0 6px #f8717155}
+  .sem-name{font-size:10px;color:var(--text2);flex:1;line-height:1.3}
+  .sem-cnt{font-size:11px;font-weight:700;color:var(--text)}
+  .sem-badge{font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700}
+  .sb-g{background:#4ade8022;color:var(--green)}
+  .sb-a{background:#fbbf2422;color:var(--amber)}
+  .sb-r{background:#f8717122;color:var(--red)}
+
+  /* ── STATUS CARDS ── */
+  .status-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .scard{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px;text-align:center}
+  .scard-n{font-size:22px;font-weight:700}
+  .scard-l{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-top:2px}
+
+  /* ── HBARS ── */
+  .hbar-row{display:grid;grid-template-columns:100px 1fr 36px;align-items:center;gap:8px;margin-bottom:6px}
+  .hbar-name{font-size:10px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .hbar-outer{height:14px;background:var(--bg);border-radius:3px;overflow:hidden}
+  .hbar-fill{height:100%;border-radius:3px;display:flex;align-items:center;justify-content:flex-end;padding-right:5px}
+  .hbar-pct{font-size:9px;font-weight:700;color:var(--blue)}
+  .hbar-num{font-size:10px;color:var(--text3);text-align:right}
+
+  /* ── TABLE ── */
+  .data-table{width:100%;border-collapse:collapse;font-size:11px}
+  .data-table th{
+    text-align:left;padding:8px 10px;font-size:9px;color:var(--text3);
+    text-transform:uppercase;letter-spacing:.08em;
+    border-bottom:1px solid var(--border);font-weight:500
+  }
+  .data-table td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:middle}
+  .data-table tr:hover td{background:var(--bg4)}
+  .tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:700}
+  .tag-g{background:#4ade8022;color:var(--green)}
+  .tag-a{background:#fbbf2422;color:var(--amber)}
+  .tag-r{background:#f8717122;color:var(--red)}
+  .tag-b{background:#4fa3e822;color:var(--blue)}
+  .tag-p{background:#a78bfa22;color:var(--purple)}
+
+  /* ── AI CHAT ── */
+  #aiPanel{
+    position:fixed;bottom:0;right:0;width:380px;
+    background:var(--bg2);border:1px solid var(--border2);
+    border-bottom:none;border-radius:12px 12px 0 0;
+    display:flex;flex-direction:column;
+    transition:height .3s;overflow:hidden;z-index:200
+  }
+  #aiPanel.collapsed{height:48px}
+  #aiPanel.expanded{height:520px}
+  #aiHeader{
+    padding:12px 16px;background:var(--bg3);
+    border-bottom:1px solid var(--border);cursor:pointer;
+    display:flex;align-items:center;justify-content:space-between;flex-shrink:0
+  }
+  .ai-title{font-size:11px;color:var(--blue);letter-spacing:.1em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+  #aiToggle{font-size:16px;color:var(--text3)}
+  #aiMessages{
+    flex:1;overflow-y:auto;padding:14px;
+    display:flex;flex-direction:column;gap:10px
+  }
+  .msg{max-width:90%;padding:9px 12px;border-radius:8px;font-size:11px;line-height:1.6}
+  .msg.user{align-self:flex-end;background:var(--bg4);border:1px solid var(--border2);color:var(--text)}
+  .msg.ai{align-self:flex-start;background:var(--bg);border:1px solid var(--border);color:var(--text2)}
+  .msg.ai strong{color:var(--blue)}
+  #aiInputRow{
+    display:flex;gap:8px;padding:10px 14px;
+    border-top:1px solid var(--border);flex-shrink:0
+  }
+  #aiInput{
+    flex:1;background:var(--bg);border:1px solid var(--border2);
+    border-radius:6px;padding:9px 12px;color:var(--text);font-size:11px;
+    font-family:'Courier New',monospace;outline:none
+  }
+  #aiInput:focus{border-color:var(--blue)}
+  #aiSend{
+    background:var(--blue);color:#fff;border:none;border-radius:6px;
+    padding:9px 14px;cursor:pointer;font-size:11px;font-family:'Courier New',monospace;
+    font-weight:700;letter-spacing:.06em
+  }
+  .ai-chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 10px}
+  .ai-chip{
+    background:var(--bg4);border:1px solid var(--border);border-radius:20px;
+    padding:4px 10px;font-size:9px;color:var(--text3);cursor:pointer;transition:all .2s
+  }
+  .ai-chip:hover{border-color:var(--blue);color:var(--blue)}
+
+  /* ── SCANLINE ── */
+  #scanline{
+    background:var(--bg2);border-top:1px solid var(--border);
+    padding:6px 20px;font-size:9px;color:var(--text3);
+    letter-spacing:.06em;display:flex;justify-content:space-between;
+    flex-shrink:0;flex-wrap:wrap;gap:4px
+  }
+  #scanAnim{color:var(--cyan)}
+
+  /* ── HIDDEN SECTIONS ── */
+  .section{display:none}.section.active{display:block}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div class="logo-area">
+    <svg width="42" height="42" viewBox="0 0 42 42" fill="none">
+      <circle cx="21" cy="21" r="20" stroke="#1e3a5f" stroke-width="1.5"/>
+      <circle cx="21" cy="21" r="16" stroke="#4fa3e8" stroke-width=".8" opacity=".35"/>
+      <ellipse cx="21" cy="21" rx="9" ry="16" stroke="#4fa3e8" stroke-width=".8" opacity=".6"/>
+      <line x1="5" y1="21" x2="37" y2="21" stroke="#4fa3e8" stroke-width=".7" opacity=".4"/>
+      <circle cx="21" cy="21" r="3" fill="#4fa3e8" opacity=".9"/>
+      <text x="21" y="37" text-anchor="middle" font-size="4.5" fill="#4fa3e8" font-family="Courier New" opacity=".7">1962</text>
+    </svg>
+    <div>
+      <div class="brand-main">PUCMM</div>
+      <div class="brand-sub">Postgrado — Sistema de Captación</div>
+    </div>
+  </div>
+  <div class="sys-chips">
+    <span class="chip"><span class="pulse"></span><span id="connStatus">CONECTANDO...</span></span>
+    <span id="clock" class="chip">--:--:--</span>
+    <button class="btn-primary" style="width:auto;padding:7px 14px;font-size:10px" onclick="showSetup()">⚙ Configurar</button>
+  </div>
+</div>
+
+<div id="wrapper">
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <div class="nav-item active" onclick="showSection('overview',this)">
+      <span class="nav-icon">◈</span>Resumen
+    </div>
+    <div class="nav-item" onclick="showSection('maestrias',this)">
+      <span class="nav-icon">◉</span>Maestrías
+    </div>
+    <div class="nav-item" onclick="showSection('contactos',this)">
+      <span class="nav-icon">◎</span>Contactos
+    </div>
+    <div class="nav-item" onclick="showSection('coordinadores',this)">
+      <span class="nav-icon">◈</span>Coordinadores
+    </div>
+    <div class="nav-item" onclick="showSection('tendencia',this)">
+      <span class="nav-icon">◉</span>Tendencia
+    </div>
+    <div style="margin-top:auto;padding:16px 18px;border-top:1px solid var(--border)">
+      <div style="font-size:9px;color:var(--text3);letter-spacing:.1em;margin-bottom:8px">ÚLTIMA SYNC</div>
+      <div id="lastSync" style="font-size:10px;color:var(--cyan)">—</div>
+      <button class="btn-primary" style="margin-top:10px;padding:7px;font-size:10px" onclick="loadData()">↻ Actualizar</button>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div id="main">
+
+    <!-- SETUP SCREEN -->
+    <div id="setupScreen">
+      <div class="step-badge">CONFIGURACIÓN INICIAL</div>
+      <h2>Conectar Excel desde OneDrive</h2>
+      <p>Para conectar tu archivo de Excel institucional, necesitas registrar una aplicación en Azure Active Directory de PUCMM y proporcionar las credenciales aquí. Los datos se guardan solo en tu navegador.</p>
+      <hr class="divider">
+
+      <div class="field-wrap">
+        <div class="field-label">Client ID (Azure App Registration)</div>
+        <input type="text" id="cfgClientId" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+        <div class="hint">En portal.azure.com → App Registrations → tu app → Application (client) ID</div>
+      </div>
+      <div class="field-wrap">
+        <div class="field-label">Tenant ID (Tu organización PUCMM)</div>
+        <input type="text" id="cfgTenantId" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+        <div class="hint">En portal.azure.com → Azure Active Directory → Tenant ID</div>
+      </div>
+      <div class="field-wrap">
+        <div class="field-label">Ruta del archivo en OneDrive</div>
+        <input type="text" id="cfgFilePath" placeholder="Documentos/Razon_de_contactos_xlsx.xlsm">
+        <div class="hint">Ruta relativa desde la raíz de tu OneDrive personal institucional</div>
+      </div>
+      <div class="field-wrap">
+        <div class="field-label">API Key de Claude (para el chat con IA)</div>
+        <input type="password" id="cfgApiKey" placeholder="sk-ant-...">
+        <div class="hint">Obtén tu clave en console.anthropic.com → API Keys. Se guarda localmente en tu navegador.</div>
+      </div>
+      <button class="btn-primary" onclick="saveConfig()">GUARDAR Y CONECTAR</button>
+      <div class="hint" style="margin-top:12px;text-align:center">
+        ¿No tienes acceso a Azure? Escríbeme y te explico cómo solicitarlo al área de TI de PUCMM.
+      </div>
+      <hr class="divider">
+      <div style="font-size:10px;color:var(--text3);text-align:center">
+        También puedes <span style="color:var(--blue);cursor:pointer" onclick="loadDemoData()">cargar datos de demostración</span> para ver el dashboard sin conexión.
+      </div>
+    </div>
+
+    <!-- LOADING -->
+    <div id="loadingScreen">
+      <div class="spinner"></div>
+      <div id="loadMsg">CONECTANDO CON MICROSOFT GRAPH...</div>
+    </div>
+
+    <!-- OVERVIEW SECTION -->
+    <div id="sec-overview" class="section active" style="display:none">
+      <div class="kpi-row" id="kpiRow"></div>
+      <div class="grid2">
+        <div class="panel">
+          <div class="panel-title">Semáforo por maestría</div>
+          <div class="sem-filters">
+            <button class="sfbtn on" onclick="filterSem('all',this)">Todos</button>
+            <button class="sfbtn" onclick="filterSem('g',this)">Verde</button>
+            <button class="sfbtn" onclick="filterSem('a',this)">Amarillo</button>
+            <button class="sfbtn" onclick="filterSem('r',this)">Rojo</button>
+          </div>
+          <div class="sem-list" id="semList"></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div class="panel">
+            <div class="panel-title">Distribución de estatus</div>
+            <div class="status-grid" id="statusGrid"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-title">Contactos por área</div>
+            <div style="position:relative;height:170px">
+              <canvas id="areaChart" role="img" aria-label="Distribución de programas por área de conocimiento">Distribución por área.</canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="panel">
+          <div class="panel-title">Top programas — contactos</div>
+          <div style="position:relative;height:220px">
+            <canvas id="barChart" role="img" aria-label="Barras horizontales con contactos por maestría">Contactos por programa.</canvas>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-title">Tendencia de captación</div>
+          <div style="position:relative;height:220px">
+            <canvas id="lineChart" role="img" aria-label="Línea de tendencia semanal de captación">Tendencia captación.</canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAESTRIAS SECTION -->
+    <div id="sec-maestrias" class="section" style="display:none">
+      <div class="panel">
+        <div class="panel-title">Detalle por maestría</div>
+        <div style="overflow-x:auto">
+          <table class="data-table" id="maestriasTable">
+            <thead><tr>
+              <th>Estado</th><th>Programa</th><th>Contactos</th>
+              <th>Admitidos</th><th>Interesados</th><th>Seguimiento</th><th>Coordinador</th>
+            </tr></thead>
+            <tbody id="maestriasBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTACTOS SECTION -->
+    <div id="sec-contactos" class="section" style="display:none">
+      <div class="panel">
+        <div class="panel-title">Todos los contactos registrados</div>
+        <div style="margin-bottom:12px;display:flex;gap:8px">
+          <input type="text" id="searchInput" placeholder="Buscar contacto, maestría o coordinador..." style="flex:1" oninput="filterContacts()">
+        </div>
+        <div style="overflow-x:auto">
+          <table class="data-table" id="contactsTable">
+            <thead><tr>
+              <th>#</th><th>Nombre</th><th>Programa</th><th>Estatus</th><th>Coordinador</th><th>Fecha</th>
+            </tr></thead>
+            <tbody id="contactsBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- COORDINADORES SECTION -->
+    <div id="sec-coordinadores" class="section" style="display:none">
+      <div class="panel">
+        <div class="panel-title">Rendimiento por coordinador</div>
+        <div id="coordPanel"></div>
+      </div>
+    </div>
+
+    <!-- TENDENCIA SECTION -->
+    <div id="sec-tendencia" class="section" style="display:none">
+      <div class="grid2">
+        <div class="panel">
+          <div class="panel-title">Estatus acumulado</div>
+          <div style="position:relative;height:260px">
+            <canvas id="donutChart" role="img" aria-label="Donut de distribución de estatus">Estatus de contactos.</canvas>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-title">Análisis de conversión</div>
+          <div id="convAnalysis" style="font-size:11px;color:var(--text2);line-height:1.8"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- SCANLINE -->
+<div id="scanline">
+  <span id="scanText">SYS: PUCMM-PG-CAPTACION | ESTADO: INICIANDO</span>
+  <span id="scanAnim">▮</span>
+</div>
+
+<!-- AI CHAT PANEL -->
+<div id="aiPanel" class="collapsed">
+  <div id="aiHeader" onclick="toggleAI()">
+    <div class="ai-title">
+      <span class="pulse"></span>
+      ✦ Asistente IA — Pregúntame sobre los datos
+    </div>
+    <span id="aiToggle">▲</span>
+  </div>
+  <div id="aiMessages">
+    <div class="msg ai">¡Hola! Soy tu asistente de análisis de captación PUCMM. Puedo analizar los datos de maestrías, coordinadores y contactos. ¿Qué necesitas saber?</div>
+  </div>
+  <div class="ai-chips" id="aiChips">
+    <span class="ai-chip" onclick="askAI('¿Cuál maestría tiene mejor tasa de conversión?')">Mejor conversión</span>
+    <span class="ai-chip" onclick="askAI('¿Qué coordinador necesita más apoyo?')">Coordinadores críticos</span>
+    <span class="ai-chip" onclick="askAI('¿Cuántos contactos faltan para tener al menos 1 en cada programa?')">Programas vacíos</span>
+    <span class="ai-chip" onclick="askAI('Dame un resumen ejecutivo del estado actual de captación')">Resumen ejecutivo</span>
+    <span class="ai-chip" onclick="askAI('¿Cuáles maestrías están en rojo y qué recomiendas?')">Recomendaciones urgentes</span>
+  </div>
+  <div id="aiInputRow">
+    <input type="text" id="aiInput" placeholder="Pregúntame algo sobre los datos..." onkeydown="if(event.key==='Enter')sendAI()">
+    <button id="aiSend" onclick="sendAI()">ENVIAR</button>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════ */
+let APP = {
+  cfg: null,
+  token: null,
+  data: { contacts:[], programs:[], byProg:{} },
+  charts: {},
+  semFilter: 'all'
+};
+
+/* ═══════════════════════════════════════════════
+   CONFIG
+═══════════════════════════════════════════════ */
+function saveConfig() {
+  const cfg = {
+    clientId: document.getElementById('cfgClientId').value.trim(),
+    tenantId: document.getElementById('cfgTenantId').value.trim(),
+    filePath: document.getElementById('cfgFilePath').value.trim(),
+    apiKey:   document.getElementById('cfgApiKey').value.trim()
+  };
+  if (!cfg.clientId || !cfg.tenantId || !cfg.filePath) {
+    alert('Por favor completa Client ID, Tenant ID y ruta del archivo.'); return;
+  }
+  localStorage.setItem('pucmm_cfg', JSON.stringify(cfg));
+  APP.cfg = cfg;
+  document.getElementById('setupScreen').style.display = 'none';
+  loadData();
+}
+
+function showSetup() {
+  const cfg = APP.cfg || {};
+  document.getElementById('cfgClientId').value = cfg.clientId || '';
+  document.getElementById('cfgTenantId').value = cfg.tenantId || '';
+  document.getElementById('cfgFilePath').value = cfg.filePath || '';
+  document.getElementById('cfgApiKey').value   = cfg.apiKey   || '';
+  document.getElementById('setupScreen').style.display = 'block';
+  document.querySelectorAll('.section').forEach(s=>s.style.display='none');
+  document.getElementById('loadingScreen').style.display = 'none';
+}
+
+/* ═══════════════════════════════════════════════
+   MICROSOFT GRAPH AUTH (MSAL implicit)
+═══════════════════════════════════════════════ */
+async function getToken() {
+  const cfg = APP.cfg;
+  const authUrl = `https://login.microsoftonline.com/${cfg.tenantId}/oauth2/v2.0/authorize`
+    + `?client_id=${cfg.clientId}`
+    + `&response_type=token`
+    + `&redirect_uri=${encodeURIComponent(location.href.split('#')[0])}`
+    + `&scope=${encodeURIComponent('https://graph.microsoft.com/Files.Read')}`
+    + `&response_mode=fragment`
+    + `&prompt=select_account`;
+
+  // Check hash for token
+  const hash = location.hash;
+  if (hash.includes('access_token')) {
+    const params = new URLSearchParams(hash.replace('#',''));
+    APP.token = params.get('access_token');
+    history.replaceState(null, '', location.pathname);
+    return APP.token;
+  }
+
+  // Redirect to auth
+  location.href = authUrl;
+  return null;
+}
+
+/* ═══════════════════════════════════════════════
+   LOAD DATA FROM ONEDRIVE
+═══════════════════════════════════════════════ */
+async function loadData() {
+  if (!APP.cfg) return;
+  setLoading(true, 'AUTENTICANDO CON MICROSOFT 365...');
+  try {
+    const token = await getToken();
+    if (!token) return;
+    setLoading(true, 'DESCARGANDO EXCEL DESDE ONEDRIVE...');
+    const filePath = APP.cfg.filePath;
+    const endpoint = `https://graph.microsoft.com/v1.0/me/drive/root:/${encodeURIComponent(filePath)}:/content`;
+    const resp = await fetch(endpoint, { headers: { Authorization: 'Bearer ' + token } });
+    if (!resp.ok) throw new Error(`Error ${resp.status}: No se pudo acceder al archivo. Verifica la ruta.`);
+    const arrayBuffer = await resp.arrayBuffer();
+    setLoading(true, 'PROCESANDO DATOS DEL EXCEL...');
+    parseExcel(arrayBuffer);
+  } catch(e) {
+    setLoading(false);
+    document.getElementById('connStatus').textContent = 'ERROR: '+e.message;
+    document.getElementById('connStatus').style.color = 'var(--red)';
+    document.getElementById('setupScreen').style.display = 'block';
+    alert('Error al conectar: ' + e.message + '\n\nSi aún no has configurado Azure, carga los datos de demostración.');
+  }
+}
+
+function parseExcel(buffer) {
+  const wb = XLSX.read(buffer, { type:'array', cellDates:true });
+  const wsContacts = wb.Sheets['CONTACTOS'] || wb.Sheets[wb.SheetNames[0]];
+  const wsPrograms = wb.Sheets['PROGRAMAS'];
+
+  const rawContacts = XLSX.utils.sheet_to_json(wsContacts, {defval:''});
+  const rawPrograms = wsPrograms ? XLSX.utils.sheet_to_json(wsPrograms, {defval:''}) : [];
+
+  // Detect actual data rows (skip header rows until we find ID-like rows)
+  const contacts = [];
+  for (const row of rawContacts) {
+    const vals = Object.values(row);
+    const id = vals[0];
+    if (!isNaN(parseInt(id)) && parseInt(id) > 0) {
+      const keys = Object.keys(row);
+      contacts.push({
+        id:       parseInt(id),
+        fecha:    String(vals[1]||''),
+        nombre:   String(vals[2]||''),
+        telefono: String(vals[3]||''),
+        correo:   String(vals[4]||''),
+        programa: String(vals[5]||''),
+        status:   String(vals[6]||''),
+        coord:    String(vals[7]||''),
+        proxSeg:  String(vals[8]||''),
+        obs:      String(vals[9]||''),
+      });
+    }
+  }
+
+  const programs = [];
+  for (const row of rawPrograms) {
+    const vals = Object.values(row);
+    if (vals[0] && typeof vals[0]==='string' && vals[0].toLowerCase().includes('maestr')) {
+      programs.push({ name: String(vals[0]), coord: String(vals[1]||''), contactos: parseInt(vals[2]||0)||0 });
+    }
+  }
+
+  buildState(contacts, programs);
+}
+
+/* ═══════════════════════════════════════════════
+   BUILD STATE & RENDER
+═══════════════════════════════════════════════ */
+function buildState(contacts, programs) {
+  APP.data.contacts = contacts;
+
+  // Group by program
+  const byProg = {};
+  contacts.forEach(c => {
+    if (!c.programa) return;
+    if (!byProg[c.programa]) byProg[c.programa] = { coord:c.coord, contacts:[] };
+    byProg[c.programa].contacts.push(c);
+  });
+
+  // Add programs with 0 contacts from PROGRAMAS sheet
+  programs.forEach(p => {
+    if (!byProg[p.name]) byProg[p.name] = { coord:p.coord, contacts:[] };
+  });
+
+  // Enrich
+  Object.keys(byProg).forEach(k => {
+    const cs = byProg[k].contacts;
+    byProg[k].total      = cs.length;
+    byProg[k].admitted   = cs.filter(c=>c.status==='Admitido').length;
+    byProg[k].interested = cs.filter(c=>c.status==='Interesado').length;
+    byProg[k].follow     = cs.filter(c=>['Duda / Realizar Seguimiento','Contactar para Seguimiento','Pendiente de admision / postergado'].some(s=>c.status.includes(s.split('/')[0].trim()))).length;
+    byProg[k].no         = cs.filter(c=>c.status==='No interesado').length;
+    byProg[k].wait       = cs.filter(c=>c.status.includes('espera')||c.status.includes('patrocinio')).length;
+    const score = byProg[k].admitted*2 + byProg[k].interested;
+    byProg[k].sem = cs.length===0 ? 'r' : score>=2 ? 'g' : score>=1 ? 'g' : (byProg[k].no===cs.length&&cs.length>0) ? 'r' : 'a';
+  });
+
+  APP.data.byProg = byProg;
+  APP.data.programs = Object.keys(byProg).map(k=>({name:k,...byProg[k]})).sort((a,b)=>{
+    const o={g:0,a:1,r:2};
+    return o[a.sem]-o[b.sem]||b.total-a.total;
+  });
+
+  setLoading(false);
+  updateScanline();
+  renderAll();
+  document.getElementById('lastSync').textContent = new Date().toLocaleTimeString('es-DO');
+  document.getElementById('connStatus').textContent = 'CONECTADO';
+  document.getElementById('connStatus').style.color = 'var(--green)';
+}
+
+function renderAll() {
+  renderKPIs();
+  renderSemList();
+  renderStatusGrid();
+  renderMaestriasTable();
+  renderContactsTable();
+  renderCoordPanel();
+  renderCharts();
+  renderConvAnalysis();
+}
+
+/* ═══════════════════════════════════════════════
+   KPIs
+═══════════════════════════════════════════════ */
+function renderKPIs() {
+  const c = APP.data.contacts;
+  const progs = APP.data.programs;
+  const admitted   = c.filter(x=>x.status==='Admitido').length;
+  const interested = c.filter(x=>x.status==='Interesado').length;
+  const follow     = c.filter(x=>x.status.includes('Seguimiento')||x.status.includes('Duda')).length;
+  const noContact  = progs.filter(p=>p.total===0).length;
+  const conv       = c.length>0 ? Math.round(((admitted+interested)/c.length)*100) : 0;
+
+  document.getElementById('kpiRow').innerHTML = [
+    {lbl:'Total contactos',val:c.length,delta:'↑ registros cargados',dc:'delta-up',c:'c-blue'},
+    {lbl:'Admitidos',val:admitted,delta:`↑ ${Math.round((admitted/c.length||0)*100)}% del total`,dc:'delta-up',c:'c-green'},
+    {lbl:'Interesados',val:interested,delta:`${Math.round((interested/c.length||0)*100)}% del total`,dc:'delta-up',c:'c-cyan'},
+    {lbl:'En seguimiento',val:follow,delta:'→ requieren contacto',dc:'delta-warn',c:'c-amber'},
+    {lbl:'Programas sin contacto',val:noContact,delta:'↓ acción urgente',dc:'delta-down',c:'c-red'},
+    {lbl:'Tasa conversión',val:conv+'%',delta:'admitidos + interesados',dc:'delta-up',c:'c-purple'},
+  ].map(k=>`
+    <div class="kpi ${k.c}">
+      <div class="kpi-lbl">${k.lbl}</div>
+      <div class="kpi-val">${k.val}</div>
+      <div class="kpi-delta ${k.dc}">${k.delta}</div>
+    </div>`).join('');
+}
+
+/* ═══════════════════════════════════════════════
+   SEMAFORO LIST
+═══════════════════════════════════════════════ */
+function renderSemList() {
+  const all = APP.data.programs;
+  const f = APP.semFilter;
+  const filtered = f==='all' ? all : all.filter(p=>p.sem===f);
+  document.getElementById('semList').innerHTML = filtered.slice(0,20).map(p=>`
+    <div class="sem-item" onclick="jumpToMaestria('${p.name.replace(/'/g,"\\'")}')">
+      <span class="sem-dot dot-${p.sem}"></span>
+      <span class="sem-name">${p.name}</span>
+      <span class="sem-badge sb-${p.sem}">${p.total}</span>
+    </div>`).join('');
+}
+
+function filterSem(f, btn) {
+  APP.semFilter = f;
+  document.querySelectorAll('.sfbtn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  renderSemList();
+}
+
+/* ═══════════════════════════════════════════════
+   STATUS GRID
+═══════════════════════════════════════════════ */
+function renderStatusGrid() {
+  const c = APP.data.contacts;
+  const counts = [
+    {lbl:'Admitidos',n:c.filter(x=>x.status==='Admitido').length,col:'var(--green)'},
+    {lbl:'Interesados',n:c.filter(x=>x.status==='Interesado').length,col:'var(--cyan)'},
+    {lbl:'Seguimiento',n:c.filter(x=>x.status.includes('Seguimiento')||x.status.includes('Duda')).length,col:'var(--amber)'},
+    {lbl:'No interesado',n:c.filter(x=>x.status==='No interesado').length,col:'var(--red)'},
+    {lbl:'En espera',n:c.filter(x=>x.status.includes('espera')||x.status.includes('patrocinio')).length,col:'var(--purple)'},
+    {lbl:'Pendiente admisión',n:c.filter(x=>x.status.includes('Pendiente')).length,col:'var(--blue)'},
+  ];
+  document.getElementById('statusGrid').innerHTML = counts.map(s=>`
+    <div class="scard">
+      <div class="scard-n" style="color:${s.col}">${s.n}</div>
+      <div class="scard-l">${s.lbl}</div>
+    </div>`).join('');
+}
+
+/* ═══════════════════════════════════════════════
+   MAESTRIAS TABLE
+═══════════════════════════════════════════════ */
+function renderMaestriasTable() {
+  document.getElementById('maestriasBody').innerHTML = APP.data.programs.map(p=>`
+    <tr>
+      <td><span class="tag tag-${p.sem}">${p.sem==='g'?'Verde':p.sem==='a'?'Amarillo':'Rojo'}</span></td>
+      <td style="max-width:240px;font-size:10px">${p.name}</td>
+      <td style="text-align:center;font-weight:700">${p.total}</td>
+      <td style="text-align:center;color:var(--green)">${p.admitted}</td>
+      <td style="text-align:center;color:var(--cyan)">${p.interested}</td>
+      <td style="text-align:center;color:var(--amber)">${p.follow}</td>
+      <td style="font-size:10px;color:var(--text3)">${p.coord}</td>
+    </tr>`).join('');
+}
+
+/* ═══════════════════════════════════════════════
+   CONTACTS TABLE
+═══════════════════════════════════════════════ */
+function renderContactsTable(filter) {
+  let cs = APP.data.contacts;
+  if (filter) cs = cs.filter(c=>
+    c.nombre.toLowerCase().includes(filter)||
+    c.programa.toLowerCase().includes(filter)||
+    c.coord.toLowerCase().includes(filter)||
+    c.status.toLowerCase().includes(filter)
+  );
+  const statusClass = s => s==='Admitido'?'tag-g':s==='Interesado'?'tag-b':s==='No interesado'?'tag-r':'tag-a';
+  document.getElementById('contactsBody').innerHTML = cs.map(c=>`
+    <tr>
+      <td>${c.id}</td>
+      <td>${c.nombre}</td>
+      <td style="font-size:10px;max-width:200px">${c.programa}</td>
+      <td><span class="tag ${statusClass(c.status)}">${c.status}</span></td>
+      <td style="font-size:10px">${c.coord}</td>
+      <td style="font-size:10px">${c.fecha||'—'}</td>
+    </tr>`).join('');
+}
+
+function filterContacts() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  renderContactsTable(q||null);
+}
+
+/* ═══════════════════════════════════════════════
+   COORDINADORES
+═══════════════════════════════════════════════ */
+function renderCoordPanel() {
+  const map = {};
+  APP.data.contacts.forEach(c=>{
+    const coord = c.coord.split('/')[0].trim();
+    if (!map[coord]) map[coord]={name:coord,total:0,admitted:0,interested:0};
+    map[coord].total++;
+    if(c.status==='Admitido')map[coord].admitted++;
+    if(c.status==='Interesado')map[coord].interested++;
+  });
+  const sorted = Object.values(map).filter(x=>x.total>0).sort((a,b)=>b.total-a.total);
+  const max = sorted[0]?.total||1;
+  document.getElementById('coordPanel').innerHTML = sorted.map(c=>`
+    <div class="hbar-row">
+      <span class="hbar-name">${c.name}</span>
+      <div class="hbar-outer">
+        <div class="hbar-fill" style="width:${Math.round((c.total/max)*100)}%;background:var(--bg4)">
+          <span class="hbar-pct">${c.total}</span>
+        </div>
+      </div>
+      <span class="hbar-num">${Math.round(((c.admitted+c.interested)/c.total)*100)}%</span>
+    </div>`).join('');
+}
+
+/* ═══════════════════════════════════════════════
+   CHARTS
+═══════════════════════════════════════════════ */
+function destroyChart(id) {
+  if (APP.charts[id]) { APP.charts[id].destroy(); delete APP.charts[id]; }
+}
+
+function renderCharts() {
+  const progs = APP.data.programs.filter(p=>p.total>0).slice(0,12);
+
+  destroyChart('bar');
+  APP.charts.bar = new Chart(document.getElementById('barChart'),{
+    type:'bar',
+    data:{
+      labels:progs.map(p=>p.name.length>22?p.name.slice(0,22)+'…':p.name),
+      datasets:[{
+        data:progs.map(p=>p.total),
+        backgroundColor:progs.map(p=>p.sem==='g'?'#4ade8040':p.sem==='a'?'#fbbf2440':'#f8717140'),
+        borderColor:progs.map(p=>p.sem==='g'?'#4ade80':p.sem==='a'?'#fbbf24':'#f87171'),
+        borderWidth:1,borderRadius:3
+      }]
+    },
+    options:{
+      indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{ticks:{color:'#475569',font:{size:9},stepSize:1},grid:{color:'#1e293b'}},
+        y:{ticks:{color:'#94a3b8',font:{size:9}},grid:{display:false}}
+      }
+    }
+  });
+
+  // Line chart — simulate weekly trend based on contacts with dates
+  const weeks = ['S1','S2','S3','S4','S5','S6','S7','S8'];
+  const trendData = weeks.map((_,i)=>Math.min(APP.data.contacts.length,Math.round(APP.data.contacts.length*(i+1)/8)));
+  destroyChart('line');
+  APP.charts.line = new Chart(document.getElementById('lineChart'),{
+    type:'line',
+    data:{
+      labels:weeks,
+      datasets:[
+        {label:'Contactos acumulados',data:trendData,borderColor:'#4fa3e8',backgroundColor:'transparent',tension:.4,pointBackgroundColor:'#4fa3e8',pointRadius:4,borderDash:[]},
+        {label:'Meta proyectada',data:weeks.map((_,i)=>Math.round((APP.data.programs.length*2)*(i+1)/8)),borderColor:'#1e3a5f',backgroundColor:'transparent',borderDash:[4,3],pointRadius:0}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{ticks:{color:'#475569',font:{size:10}},grid:{color:'#1e293b'}},
+        y:{ticks:{color:'#475569',font:{size:10}},grid:{color:'#1e293b'}}
+      }
+    }
+  });
+
+  // Area donut
+  const areas = {
+    'Derecho':0,'Negocios/Gestión':0,'Odontología':0,
+    'Diseño/Arquitectura':0,'Salud/Psicología':0,'Tecnología':0,'Otros':0
+  };
+  APP.data.programs.forEach(p=>{
+    const n=p.name.toLowerCase();
+    if(n.includes('derecho')||n.includes('juridic')||n.includes('legal'))areas['Derecho']++;
+    else if(n.includes('gesti')||n.includes('empresa')||n.includes('finanzas')||n.includes('bancaria')||n.includes('mercado'))areas['Negocios/Gestión']++;
+    else if(n.includes('odonto')||n.includes('periodoncia')||n.includes('prostodoncia')||n.includes('bucal')||n.includes('dental'))areas['Odontología']++;
+    else if(n.includes('diseño')||n.includes('arqui')||n.includes('urbana')||n.includes('cinemato'))areas['Diseño/Arquitectura']++;
+    else if(n.includes('psico')||n.includes('salud')||n.includes('neuro')||n.includes('patolog'))areas['Salud/Psicología']++;
+    else if(n.includes('ciberseg')||n.includes('tecnol')||n.includes('sistema')||n.includes('cadena'))areas['Tecnología']++;
+    else areas['Otros']++;
+  });
+  destroyChart('area');
+  APP.charts.area = new Chart(document.getElementById('areaChart'),{
+    type:'doughnut',
+    data:{
+      labels:Object.keys(areas).filter(k=>areas[k]>0).map(k=>`${k} ${areas[k]}`),
+      datasets:[{
+        data:Object.values(areas).filter(v=>v>0),
+        backgroundColor:['#4fa3e8','#22d3ee','#4ade80','#fbbf24','#a78bfa','#f87171','#64748b'],
+        borderWidth:0,hoverOffset:3
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:true,position:'right',labels:{color:'#94a3b8',font:{size:8.5},boxWidth:8,padding:5}}}
+    }
+  });
+
+  // Donut for tendencia section
+  const c = APP.data.contacts;
+  destroyChart('donut');
+  APP.charts.donut = new Chart(document.getElementById('donutChart'),{
+    type:'doughnut',
+    data:{
+      labels:['Admitidos','Interesados','Seguimiento','No interesado','En espera','Pendiente'],
+      datasets:[{
+        data:[
+          c.filter(x=>x.status==='Admitido').length,
+          c.filter(x=>x.status==='Interesado').length,
+          c.filter(x=>x.status.includes('Seguimiento')||x.status.includes('Duda')).length,
+          c.filter(x=>x.status==='No interesado').length,
+          c.filter(x=>x.status.includes('espera')||x.status.includes('patrocinio')).length,
+          c.filter(x=>x.status.includes('Pendiente')||x.status.includes('Contactar')).length,
+        ],
+        backgroundColor:['#4ade80','#22d3ee','#fbbf24','#f87171','#a78bfa','#4fa3e8'],
+        borderWidth:0,hoverOffset:4
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,cutout:'60%',
+      plugins:{legend:{display:true,position:'right',labels:{color:'#94a3b8',font:{size:10},boxWidth:10,padding:6}}}
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════════
+   CONVERSION ANALYSIS
+═══════════════════════════════════════════════ */
+function renderConvAnalysis() {
+  const c = APP.data.contacts;
+  const p = APP.data.programs;
+  const total = c.length;
+  const admitted = c.filter(x=>x.status==='Admitido').length;
+  const interested = c.filter(x=>x.status==='Interesado').length;
+  const conv = total ? Math.round(((admitted+interested)/total)*100) : 0;
+  const zeros = p.filter(x=>x.total===0).length;
+  const top = p.find(x=>x.sem==='g'&&x.total>0);
+
+  document.getElementById('convAnalysis').innerHTML = `
+    <div style="margin-bottom:14px;padding:12px;background:var(--bg);border-radius:6px;border:1px solid var(--border)">
+      <div style="font-size:28px;font-weight:700;color:var(--green)">${conv}%</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:2px">TASA DE CONVERSIÓN GLOBAL</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="padding:10px;background:var(--bg);border-radius:6px;border-left:3px solid var(--green)">
+        <div style="font-size:10px;color:var(--text3)">Mejor programa</div>
+        <div style="font-size:11px;color:var(--text);margin-top:3px">${top?.name||'—'} <span style="color:var(--green)">(${top?.total||0} contactos)</span></div>
+      </div>
+      <div style="padding:10px;background:var(--bg);border-radius:6px;border-left:3px solid var(--red)">
+        <div style="font-size:10px;color:var(--text3)">Programas sin contacto</div>
+        <div style="font-size:11px;color:var(--red);margin-top:3px">${zeros} programas requieren captación urgente</div>
+      </div>
+      <div style="padding:10px;background:var(--bg);border-radius:6px;border-left:3px solid var(--amber)">
+        <div style="font-size:10px;color:var(--text3)">Recomendación del sistema</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:3px;line-height:1.6">Priorizar seguimiento a los ${c.filter(x=>x.status.includes('Seguimiento')||x.status.includes('Duda')).length} contactos en estado de duda. Potencial de elevar conversión al ${Math.min(100,conv+15)}%.</div>
+      </div>
+    </div>`;
+}
+
+/* ═══════════════════════════════════════════════
+   NAVIGATION
+═══════════════════════════════════════════════ */
+function showSection(id, el) {
+  document.querySelectorAll('.section').forEach(s=>s.style.display='none');
+  document.getElementById('sec-'+id).style.display='block';
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  if(el) el.classList.add('active');
+}
+
+function jumpToMaestria(name) {
+  showSection('maestrias', document.querySelectorAll('.nav-item')[1]);
+  setTimeout(()=>{
+    const rows = document.querySelectorAll('#maestriasBody tr');
+    rows.forEach(r=>{ r.style.background=''; if(r.textContent.includes(name.slice(0,30))) r.style.background='var(--bg4)'; });
+  },100);
+}
+
+/* ═══════════════════════════════════════════════
+   AI CHAT
+═══════════════════════════════════════════════ */
+function toggleAI() {
+  const p = document.getElementById('aiPanel');
+  const t = document.getElementById('aiToggle');
+  if (p.classList.contains('collapsed')) { p.classList.replace('collapsed','expanded'); t.textContent='▼'; }
+  else { p.classList.replace('expanded','collapsed'); t.textContent='▲'; }
+}
+
+function addMsg(role, text) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + role;
+  div.innerHTML = text;
+  document.getElementById('aiMessages').appendChild(div);
+  document.getElementById('aiMessages').scrollTop = 9999;
+}
+
+function askAI(q) {
+  document.getElementById('aiInput').value = q;
+  sendAI();
+}
+
+async function sendAI() {
+  const input = document.getElementById('aiInput');
+  const q = input.value.trim();
+  if (!q) return;
+  input.value = '';
+
+  const cfg = APP.cfg || JSON.parse(localStorage.getItem('pucmm_cfg')||'{}');
+  if (!cfg.apiKey) {
+    addMsg('ai','⚠ Para usar el chat con IA necesitas configurar tu API Key de Claude en el panel de configuración (⚙ Configurar).');
+    return;
+  }
+
+  addMsg('user', q);
+
+  // Build context summary from current data
+  const c = APP.data.contacts;
+  const p = APP.data.programs;
+  const dataCtx = p.length > 0 ? `
+DATOS ACTUALES DEL SISTEMA (${new Date().toLocaleDateString('es-DO')}):
+- Total contactos: ${c.length}
+- Admitidos: ${c.filter(x=>x.status==='Admitido').length}
+- Interesados: ${c.filter(x=>x.status==='Interesado').length}
+- En seguimiento/duda: ${c.filter(x=>x.status.includes('Seguimiento')||x.status.includes('Duda')).length}
+- No interesados: ${c.filter(x=>x.status==='No interesado').length}
+- En espera de patrocinio: ${c.filter(x=>x.status.includes('espera')).length}
+- Total programas registrados: ${p.length}
+- Programas sin contacto (🔴 rojo): ${p.filter(x=>x.total===0).length}
+- Programas con seguimiento activo (🟡 amarillo): ${p.filter(x=>x.sem==='a').length}
+- Programas funcionando bien (🟢 verde): ${p.filter(x=>x.sem==='g').length}
+- Tasa de conversión global: ${c.length?Math.round(((c.filter(x=>x.status==='Admitido').length+c.filter(x=>x.status==='Interesado').length)/c.length)*100):0}%
+
+TOP PROGRAMAS CON CONTACTOS:
+${p.filter(x=>x.total>0).slice(0,10).map(x=>`  - ${x.name}: ${x.total} contactos, ${x.admitted} admitidos, ${x.interested} interesados (${x.sem==='g'?'VERDE':x.sem==='a'?'AMARILLO':'ROJO'})`).join('\n')}
+
+PROGRAMAS SIN NINGÚN CONTACTO:
+${p.filter(x=>x.total===0).map(x=>`  - ${x.name} (Coord: ${x.coord})`).join('\n')}
+  ` : 'No hay datos cargados aún. El sistema está en modo demostración o sin conexión al Excel.';
+
+  const thinkingDiv = document.createElement('div');
+  thinkingDiv.className = 'msg ai';
+  thinkingDiv.innerHTML = '<span style="color:var(--text3)">▮ Analizando datos...</span>';
+  document.getElementById('aiMessages').appendChild(thinkingDiv);
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':cfg.apiKey,'anthropic-version':'2023-06-01'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:600,
+        system:`Eres el asistente de análisis del Centro de Captación de Postgrado de la PUCMM (Pontificia Universidad Católica Madre y Maestra, República Dominicana). Tienes acceso a los datos en tiempo real del sistema de gestión de contactos e interesados en maestrías. Responde en español, de forma concisa y accionable. Usa formato HTML simple (bold, listas). Sé específico con los números que tienes disponibles.
+
+${dataCtx}`,
+        messages:[{role:'user',content:q}]
+      })
+    });
+    const data = await resp.json();
+    thinkingDiv.innerHTML = data.content?.[0]?.text || 'Error al obtener respuesta.';
+  } catch(e) {
+    thinkingDiv.innerHTML = `<span style="color:var(--red)">Error: ${e.message}</span>`;
+  }
+  document.getElementById('aiMessages').scrollTop = 9999;
+}
+
+/* ═══════════════════════════════════════════════
+   DEMO DATA
+═══════════════════════════════════════════════ */
+function loadDemoData() {
+  document.getElementById('setupScreen').style.display = 'none';
+  const contacts = [
+    {id:1,fecha:'19/05/2026',nombre:'Juan Pérez',programa:'Maestría en Metodología y Ciencias Aplicadas al Entrenamiento Deportivo',status:'Admitido',coord:'Alexis Borges'},
+    {id:2,fecha:'19/05/2026',nombre:'María Rodríguez',programa:'Maestría en Diseño de Producción para Cinematografía',status:'No interesado',coord:'Domingo Abreu'},
+    {id:3,fecha:'19/05/2026',nombre:'Carlos Fernández',programa:'Maestría en Narrativa Audiovisual y Transmedia',status:'Admitido',coord:'Inés de los Santos'},
+    {id:4,fecha:'19/05/2026',nombre:'Ana Martínez',programa:'Maestría en Neuropsicología Clínica',status:'Interesado',coord:'Ana Estévez'},
+    {id:5,fecha:'19/05/2026',nombre:'José Gómez',programa:'Maestría en Ciberseguridad',status:'Contactar para Seguimiento',coord:'Arlene Estévez'},
+    {id:6,fecha:'19/05/2026',nombre:'Laura Sánchez',programa:'Doctorado en Estudios del Español',status:'En espera de patrocinio',coord:'Florilena De Jesús'},
+    {id:7,fecha:'19/05/2026',nombre:'Miguel Herrera',programa:'Maestría en Diseño y Planificación Urbana',status:'Interesado',coord:'Michel Valdéz'},
+    {id:8,fecha:'19/05/2026',nombre:'Patricia Díaz',programa:'Maestría en Neuroeducación Cognitiva',status:'Interesado',coord:'Glorianny Báez'},
+    {id:9,fecha:'19/05/2026',nombre:'Andrés Ramírez',programa:'Maestría Movilidad Urbana y Regional',status:'Duda / Realizar Seguimiento',coord:'Michel Valdéz'},
+    {id:10,fecha:'19/05/2026',nombre:'Daniela Cruz',programa:'Maestría en Gestión de Riesgo y Tesorería',status:'No interesado',coord:'Isabel Sánchez'},
+    {id:11,fecha:'19/05/2026',nombre:'Luis Peña',programa:'Maestría en Gestión Bancaria y Financiera',status:'Interesado',coord:'Isabel Sánchez'},
+    {id:12,fecha:'19/05/2026',nombre:'Sofía Castillo',programa:'Maestría en Mercados Financieros',status:'Duda / Realizar Seguimiento',coord:'Isabel Sánchez'},
+    {id:13,fecha:'19/05/2026',nombre:'Ricardo Núñez',programa:'Maestría en Diseño Arquitectónico',status:'Duda / Realizar Seguimiento',coord:'Jaime Sued'},
+    {id:14,fecha:'19/05/2026',nombre:'Elena Morales',programa:'Maestría en Periodoncia e Implantología Oral',status:'Admitido',coord:'Aimee Cuesta'},
+    {id:15,fecha:'19/05/2026',nombre:'Javier López',programa:'Maestría en Prostodoncia e Implantología Oral',status:'Admitido',coord:'Kenia Rodríguez'},
+    {id:16,fecha:'19/05/2026',nombre:'Camila Torres',programa:'Maestría en Rehabilitación Bucal',status:'Admitido',coord:'Nelson Orsini'},
+    {id:17,fecha:'19/05/2026',nombre:'Fernando Reyes',programa:'Maestría en Odontopediatría',status:'Pendiente de admisión',coord:'Zaida Jiménez'},
+    {id:18,fecha:'19/05/2026',nombre:'Gabriela Ortiz',programa:'Especialidad en Trastornos Temporomandibular',status:'Duda / Realizar Seguimiento',coord:'Elba Estrella'},
+    {id:19,fecha:'19/05/2026',nombre:'Eduardo Vargas',programa:'Maestría en Gestión de Sistemas Ferroviarios',status:'En espera de patrocinio',coord:'Jesús Ramírez'},
+    {id:20,fecha:'19/05/2026',nombre:'Valeria Medina',programa:'Maestría en Gestión de la Cadena de Suministro',status:'Duda / Realizar Seguimiento',coord:'Luis Germosén'},
+    {id:21,fecha:'19/05/2026',nombre:'Roberto Jiménez',programa:'Maestría en Dirección de Comunicación Corporativa',status:'Duda / Realizar Seguimiento',coord:'Magdalena Durán'},
+    {id:22,fecha:'19/05/2026',nombre:'Natalia Cabrera',programa:'Maestría en Derecho Tributario',status:'Interesado',coord:'Pascal Peña'},
+    {id:23,fecha:'19/05/2026',nombre:'Diego Santana',programa:'Maestría en Derecho del Trabajo y Seguridad Social',status:'Contactar para Seguimiento',coord:'Miguelina Ureña'},
+    {id:24,fecha:'19/05/2026',nombre:'Paola Vega',programa:'Maestría en Gestión de Empresas — Finanzas',status:'No interesado',coord:'Natalia Concepción'},
+    {id:25,fecha:'19/05/2026',nombre:'Cristian Acosta',programa:'Maestría en Gestión de Empresas — Habilidades Directivas',status:'Interesado',coord:'Natalia Concepción'},
+    {id:26,fecha:'19/05/2026',nombre:'Verónica Paredes',programa:'Maestría en Gestión de Empresas — Estrategia',status:'Interesado',coord:'Natalia Concepción'},
+    {id:27,fecha:'19/05/2026',nombre:'Samuel Molina',programa:'Maestría en Patología del Lenguaje y Habla',status:'No interesado',coord:'Sor Salcedo'},
+    {id:28,fecha:'19/05/2026',nombre:'Karina Paulino',programa:'Maestría en Administración de la Construcción',status:'Interesado',coord:'Pedro Reyes'},
+    {id:29,fecha:'19/05/2026',nombre:'Héctor Valdez',programa:'Maestría en Gerencia en Servicios de Alimentación',status:'Duda / Realizar Seguimiento',coord:'Yahaira Sánchez'},
+    {id:30,fecha:'19/05/2026',nombre:'Alicia Rosario',programa:'Doctorado en Historia del Caribe',status:'Admitido',coord:'Mukien Sang'},
+    {id:31,fecha:'19/05/2026',nombre:'Tomás Guerrero',programa:'Maestría en Derecho de los Mercados Financieros',status:'En espera de patrocinio',coord:'Miguelina Ureña'},
+    {id:32,fecha:'19/05/2026',nombre:'María Extra',programa:'Maestría en Metodología y Ciencias Aplicadas al Entrenamiento Deportivo',status:'Interesado',coord:'Alexis Borges'},
+  ];
+  const programs = [
+    {name:'Maestría Ejecutiva en Dirección de Proyectos',coord:'Marcela Mirabal',contactos:0},
+    {name:'Maestría en Contrataciones Públicas Estratégicas',coord:'Maribel Justo',contactos:0},
+    {name:'Maestría en Seguridad Social',coord:'Pascal Peña',contactos:0},
+    {name:'Maestría en Ciencias Penales',coord:'Miguelina Ureña',contactos:0},
+    {name:'Maestría en Derecho de los Negocios Corporativos',coord:'Miguelina Ureña',contactos:0},
+    {name:'Maestría en Derecho Constitucional y Procesal',coord:'Miguelina Ureña',contactos:0},
+    {name:'Maestría en Procedimiento Civil',coord:'Miguelina Ureña',contactos:0},
+    {name:'Maestría en Relaciones Internacionales',coord:'Stephanie Pou',contactos:0},
+  ];
+  buildState(contacts, programs);
+  document.getElementById('connStatus').textContent = 'MODO DEMO';
+  document.getElementById('connStatus').style.color = 'var(--amber)';
+  showSection('overview', document.querySelector('.nav-item'));
+  document.getElementById('aiPanel').classList.replace('collapsed','expanded');
+  document.getElementById('aiToggle').textContent = '▼';
+}
+
+/* ═══════════════════════════════════════════════
+   UTILS
+═══════════════════════════════════════════════ */
+function setLoading(on, msg) {
+  document.getElementById('loadingScreen').style.display = on ? 'block' : 'none';
+  document.querySelectorAll('.section').forEach(s=>s.style.display='none');
+  if (!on && APP.data.contacts.length>0) document.getElementById('sec-overview').style.display='block';
+  if (msg) document.getElementById('loadMsg').textContent = msg;
+}
+
+function updateScanline() {
+  const p = APP.data.programs;
+  const c = APP.data.contacts;
+  document.getElementById('scanText').textContent =
+    `SYS: PUCMM-PG-v2.6 | CONTACTOS: ${c.length} | PROGRAMAS: ${p.length} | VERDE: ${p.filter(x=>x.sem==='g').length} | AMARILLO: ${p.filter(x=>x.sem==='a').length} | ROJO: ${p.filter(x=>x.sem==='r').length} | CONV: ${c.length?Math.round(((c.filter(x=>x.status==='Admitido').length+c.filter(x=>x.status==='Interesado').length)/c.length)*100):0}%`;
+}
+
+// Clock
+setInterval(()=>{
+  document.getElementById('clock').textContent = new Date().toLocaleTimeString('es-DO',{hour12:false});
+}, 1000);
+
+// Scanline blink
+let blink=true;
+setInterval(()=>{ document.getElementById('scanAnim').textContent = blink?'▮':'▯'; blink=!blink; },600);
+
+// Init
+window.addEventListener('load', ()=>{
+  const saved = localStorage.getItem('pucmm_cfg');
+  if (saved) {
+    APP.cfg = JSON.parse(saved);
+    document.getElementById('setupScreen').style.display = 'none';
+    // Check for OAuth token in URL hash
+    if (location.hash.includes('access_token')) {
+      loadData();
+    } else {
+      // Show demo option without auto-redirecting
+      document.getElementById('connStatus').textContent = 'LISTO — Conecta o carga demo';
+      loadDemoData();
+    }
+  }
+  // If no config, show setup
+});
+</script>
+</body>
+</html>
