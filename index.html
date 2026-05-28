@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PUCMM Postgrado — Centro de Captación</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#060b17;--bg2:#0a1020;--bg3:#0d1627;--bg4:#111d35;--border:#1e3a5f;--border2:#2a4f80;--blue:#4fa3e8;--cyan:#22d3ee;--green:#4ade80;--amber:#fbbf24;--red:#f87171;--purple:#a78bfa;--text:#e2e8f0;--text2:#94a3b8;--text3:#64748b}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Courier New',monospace}
+body{display:flex;flex-direction:column;overflow-x:hidden}
+#topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;flex-wrap:wrap;gap:8px;position:sticky;top:0;z-index:100}
+.logo-area{display:flex;align-items:center;gap:12px}
+.brand-main{font-size:18px;font-weight:700;color:var(--blue);letter-spacing:.1em}
+.brand-sub{font-size:12px;color:var(--text3);letter-spacing:.12em;text-transform:uppercase}
+.sys-chips{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.chip{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text3)}
+.pulse{width:7px;height:7px;border-radius:50%;background:var(--cyan);animation:blink 1.4s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.15}}
+#clock{font-size:13px;color:var(--cyan)}
+.btn-cfg{background:transparent;border:1px solid var(--border);border-radius:5px;padding:7px 13px;color:var(--text3);cursor:pointer;font-size:12px;font-family:'Courier New',monospace;letter-spacing:.06em;transition:all .2s}
+.btn-cfg:hover{border-color:var(--blue);color:var(--blue)}
+#wrapper{display:flex;flex:1;overflow:hidden}
+#sidebar{width:180px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--border);padding:12px 0;display:flex;flex-direction:column;overflow-y:auto}
+.nav-item{display:flex;align-items:center;padding:11px 16px;font-size:12px;color:var(--text3);cursor:pointer;letter-spacing:.06em;text-transform:uppercase;transition:all .2s;border-left:3px solid transparent}
+.nav-item:hover{background:var(--bg3);color:var(--text)}
+.nav-item.active{background:var(--bg3);color:var(--blue);border-left-color:var(--blue)}
+.nav-sep{border-top:1px solid var(--border);margin:10px 0}
+.sync-box{padding:10px 16px}
+.sync-lbl{font-size:11px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px}
+.sync-val{font-size:12px;color:var(--cyan);margin-bottom:8px;min-height:14px}
+.btn-sync{width:100%;background:var(--bg4);border:1px solid var(--border);border-radius:5px;padding:8px;font-size:12px;color:var(--blue);cursor:pointer;font-family:'Courier New',monospace;letter-spacing:.05em;transition:all .2s}
+.btn-sync:hover{background:var(--border)}
+#main{flex:1;overflow-y:auto;padding:16px}
+#setupScreen{max-width:520px;margin:40px auto;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:26px;display:none}
+#setupScreen h2{font-size:15px;color:var(--blue);margin-bottom:6px;letter-spacing:.08em;text-transform:uppercase}
+#setupScreen p{font-size:11px;color:var(--text2);line-height:1.7;margin-bottom:18px}
+.field-wrap{margin-bottom:13px}
+.field-label{font-size:9px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px}
+.field-hint{font-size:9px;color:var(--text3);margin-top:4px;line-height:1.5}
+input[type=text],input[type=password]{width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:5px;padding:9px 11px;color:var(--text);font-size:11px;font-family:'Courier New',monospace;outline:none}
+input[type=text]:focus,input[type=password]:focus{border-color:var(--blue)}
+.btn-primary{background:var(--blue);color:#fff;border:none;border-radius:5px;padding:11px;font-size:11px;cursor:pointer;font-family:'Courier New',monospace;letter-spacing:.08em;font-weight:700;width:100%;transition:opacity .2s}
+.btn-primary:hover{opacity:.85}
+.divider{border:none;border-top:1px solid var(--border);margin:16px 0}
+.instructions{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:13px;margin-bottom:15px}
+.inst-step{display:flex;gap:10px;margin-bottom:9px;font-size:10px;color:var(--text2);line-height:1.6}
+.inst-step:last-child{margin-bottom:0}
+.inst-num{width:20px;height:20px;border-radius:50%;border:1px solid var(--blue);color:var(--blue);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.inst-step code{background:var(--bg3);color:var(--cyan);padding:1px 5px;border-radius:3px;font-size:9px}
+.demo-link{text-align:center;font-size:10px;color:var(--text3);margin-top:10px}
+.demo-link span{color:var(--blue);cursor:pointer;text-decoration:underline}
+.error-box{background:#f8717115;border:1px solid #f8717140;border-radius:6px;padding:11px 13px;font-size:11px;color:var(--red);margin-bottom:11px;line-height:1.6}
+#loadingScreen{display:none;text-align:center;padding:70px 20px}
+.spinner{width:44px;height:44px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loadMsg{font-size:13px;color:var(--text3);letter-spacing:.08em}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px}
+.kpi{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:13px 15px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.kpi.c-blue::before{background:var(--blue)}.kpi.c-cyan::before{background:var(--cyan)}.kpi.c-green::before{background:var(--green)}.kpi.c-amber::before{background:var(--amber)}.kpi.c-red::before{background:var(--red)}.kpi.c-purple::before{background:var(--purple)}
+.kpi-lbl{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px}
+.kpi-val{font-size:28px;font-weight:700;color:var(--text);line-height:1}
+.kpi-delta{font-size:11px;margin-top:4px}
+.delta-up{color:var(--green)}.delta-warn{color:var(--amber)}.delta-down{color:var(--red)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+@media(max-width:860px){.grid2{grid-template-columns:1fr}}
+.panel{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:15px}
+.panel-title{font-size:11px;color:var(--blue);letter-spacing:.15em;text-transform:uppercase;margin-bottom:13px;display:flex;align-items:center;gap:6px}
+.panel-title::before{content:'';width:3px;height:12px;background:var(--blue);border-radius:2px;display:inline-block}
+.sem-filters{display:flex;gap:0;margin-bottom:11px;border-radius:5px;overflow:hidden;border:1px solid var(--border)}
+.sfbtn{flex:1;padding:7px;font-size:11px;background:var(--bg);color:var(--text3);border:none;cursor:pointer;letter-spacing:.06em;text-transform:uppercase;font-family:'Courier New',monospace;transition:all .2s}
+.sfbtn.on{background:var(--bg4);color:var(--blue)}
+.sem-list{display:flex;flex-direction:column;gap:5px;max-height:300px;overflow-y:auto}
+.sem-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:5px;background:var(--bg);border:1px solid var(--border);cursor:pointer;transition:all .2s}
+.sem-item:hover{border-color:var(--blue)}
+.sem-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.dot-g{background:var(--green);box-shadow:0 0 6px #4ade8055}.dot-a{background:var(--amber);box-shadow:0 0 6px #fbbf2455}.dot-r{background:var(--red);box-shadow:0 0 6px #f8717155}
+.sem-name{font-size:12px;color:var(--text2);flex:1;line-height:1.3}
+.sem-cnt{font-size:12px;font-weight:700;color:var(--text);min-width:18px;text-align:right}
+.status-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.scard{background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:9px;text-align:center}
+.scard-n{font-size:24px;font-weight:700}
+.scard-l{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-top:2px}
+.data-table{width:100%;border-collapse:collapse;font-size:13px}
+.data-table th{text-align:left;padding:9px 10px;font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid var(--border);font-weight:500}
+.data-table td{padding:9px 10px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:middle}
+.data-table tr:hover td{background:var(--bg4)}
+.tag{display:inline-block;padding:3px 9px;border-radius:10px;font-size:10px;font-weight:700}
+.tag-g{background:#4ade8022;color:var(--green)}.tag-a{background:#fbbf2422;color:var(--amber)}.tag-r{background:#f8717122;color:var(--red)}.tag-b{background:#4fa3e822;color:var(--blue)}
+.hbar-row{display:grid;grid-template-columns:110px 1fr 40px;align-items:center;gap:8px;margin-bottom:6px}
+.hbar-name{font-size:12px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hbar-outer{height:14px;background:var(--bg);border-radius:3px;overflow:hidden}
+.hbar-fill{height:100%;border-radius:3px;display:flex;align-items:center;justify-content:flex-end;padding-right:5px}
+.hbar-pct{font-size:9px;font-weight:700;color:var(--blue)}
+.hbar-num{font-size:12px;color:var(--text3);text-align:right}
+#scanline{background:var(--bg2);border-top:1px solid var(--border);padding:5px 18px;font-size:9px;color:var(--text3);letter-spacing:.06em;display:flex;justify-content:space-between;flex-shrink:0;flex-wrap:wrap;gap:4px}
+#scanAnim{color:var(--cyan)}
+.sem-leyenda{display:flex;flex-direction:column;gap:4px;margin-bottom:10px;padding:8px 10px;background:var(--bg);border-radius:5px;border:1px solid var(--border)}
+.ley-item{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text3);letter-spacing:.04em}
+.sem-detail-hidden{display:none}
+.sem-detail-open{display:block;margin-top:12px}
+.detail-status-badge{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:6px;font-size:12px;font-weight:700;margin-bottom:14px}
+.detail-stat-row{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px}
+.detail-stat{background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:8px 10px;text-align:center}
+.detail-stat-n{font-size:20px;font-weight:700}
+.detail-stat-l{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+.detail-coord{font-size:12px;color:var(--text3);margin-bottom:10px}
+.detail-rec{background:var(--bg);border-radius:5px;padding:10px 12px;font-size:12px;color:var(--text2);line-height:1.7;border-left:3px solid var(--border)}
+.section{display:none}.section.active{display:block}
+</style>
+</head>
+<body>
+<div id="topbar">
+  <div class="logo-area">
+    <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+      <circle cx="20" cy="20" r="19" stroke="#1e3a5f" stroke-width="1.5"/>
+      <circle cx="20" cy="20" r="15" stroke="#4fa3e8" stroke-width=".7" opacity=".4"/>
+      <ellipse cx="20" cy="20" rx="8" ry="15" stroke="#4fa3e8" stroke-width=".7" opacity=".6"/>
+      <line x1="5" y1="20" x2="35" y2="20" stroke="#4fa3e8" stroke-width=".7" opacity=".4"/>
+      <circle cx="20" cy="20" r="3" fill="#4fa3e8" opacity=".9"/>
+      <text x="20" y="35" text-anchor="middle" font-size="4" fill="#4fa3e8" font-family="Courier New" opacity=".7">1962</text>
+    </svg>
+    <div>
+      <div class="brand-main">PUCMM</div>
+      <div class="brand-sub">Postgrado — Sistema de Captación</div>
+    </div>
+  </div>
+  <div class="sys-chips">
+    <span class="chip"><span class="pulse"></span><span id="connStatus">INICIANDO...</span></span>
+    <span id="clock" class="chip">--:--:--</span>
+    
+  </div>
+</div>
+
+<div id="wrapper">
+  <div id="sidebar">
+    <div class="nav-item active" onclick="showSection('overview',this)">Resumen</div>
+    <div class="nav-item" onclick="showSection('maestrías',this)">Maestrías</div>
+    <div class="nav-item" onclick="showSection('contactos',this)">Contactos</div>
+    <div class="nav-item" onclick="showSection('coordinadores',this)">Coordinadores</div>
+    <div class="nav-item" onclick="showSection('tendencia',this)">Tendencia</div>
+    <div class="nav-sep"></div>
+    <div class="sync-box">
+      <div class="sync-lbl">Última sincronización</div>
+      <div class="sync-val" id="lastSync">--</div>
+      <button class="btn-sync" onclick="loadFromOneDrive()">Actualizar datos</button>
+    </div>
+  </div>
+
+  <div id="main">
+    <div id="setupScreen">
+      <h2>Configurar fuente de datos</h2>
+      <p>El dashboard lee tu archivo Excel directamente desde GitHub. Solo confirma la URL.</p>
+      <div class="instructions">
+        <div class="inst-step"><span class="inst-num">1</span><span>Sube tu Excel actualizado a GitHub como <code>datos.xlsm</code></span></div>
+        <div class="inst-step"><span class="inst-num">2</span><span>La URL se genera automáticamente — solo verifica que sea correcta</span></div>
+        <div class="inst-step"><span class="inst-num">3</span><span>Clic en <code>CONECTAR</code> y el dashboard carga los datos</span></div>
+      </div>
+      <div id="setupError" class="error-box" style="display:none"></div>
+      <div class="field-wrap">
+        <div class="field-label">URL del archivo Excel en GitHub</div>
+        <input type="text" id="cfgShareUrl" placeholder="https://gabrielferreras.github.io/pucmm-postgrado-dashboard/datos.xlsm" value="https://gabrielferreras.github.io/pucmm-postgrado-dashboard/datos.xlsm">
+        <div class="field-hint">Esta es tu URL automática. Solo cambiala si renombraste el archivo.</div>
+      </div>
+      <div class="field-wrap">
+        <div class="field-label">API Key de Claude (opcional — para chat con IA)</div>
+        <input type="password" id="cfgApiKey" placeholder="sk-ant-api03-...">
+        <div class="field-hint">Obtenla en console.anthropic.com — opcional, el dashboard funciona sin ella</div>
+      </div>
+      <button class="btn-primary" onclick="saveConfig()">CONECTAR</button>
+      <div class="divider"></div>
+      <div class="demo-link">Quieres ver una demo? <span onclick="loadDemoData()">Cargar datos de demostración</span></div>
+    </div>
+
+    <div id="loadingScreen">
+      <div class="spinner"></div>
+      <div id="loadMsg">DESCARGANDO DATOS DESDE ONEDRIVE...</div>
+    </div>
+
+    <div id="sec-overview" class="section">
+      <div class="kpi-row" id="kpiRow"></div>
+      <div class="grid2">
+        <div class="panel">
+          <div class="panel-title">Maestrías</div>
+          <div class="sem-filters">
+            <button class="sfbtn on" onclick="filterSem('all',this)">Todas</button>
+            <button class="sfbtn" onclick="filterSem('g',this)">Verde</button>
+            <button class="sfbtn" onclick="filterSem('a',this)">Amarillo</button>
+            <button class="sfbtn" onclick="filterSem('r',this)">Rojo</button>
+          </div>
+          <div class="sem-leyenda">
+            <span class="ley-item"><span class="sem-dot dot-g"></span>Verde — Admitidos</span>
+            <span class="ley-item"><span class="sem-dot dot-a"></span>Amarillo — Requieren contacto</span>
+            <span class="ley-item"><span class="sem-dot dot-r"></span>Rojo — Acción urgente</span>
+          </div>
+          <div class="sem-list" id="semList"></div>
+        </div>
+        <div id="semDetailPanel" class="panel sem-detail-hidden">
+          <div class="panel-title" id="semDetailTitle">Detalle</div>
+          <div id="semDetailContent"></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div class="panel">
+            <div class="panel-title">Distribución de estatus</div>
+            <div class="status-grid" id="statusGrid"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-title">Áreas de conocimiento</div>
+            <div style="position:relative;height:160px"><canvas id="areaChart"></canvas></div>
+          </div>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="panel">
+          <div class="panel-title">Top programas</div>
+          <div style="position:relative;height:220px"><canvas id="barChart"></canvas></div>
+        </div>
+        <div class="panel">
+          <div class="panel-title">Tendencia de captación</div>
+          <div style="position:relative;height:220px"><canvas id="lineChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="sec-maestrías" class="section">
+      <div class="panel">
+        <div class="panel-title">Detalle por maestría</div>
+        <div style="overflow-x:auto">
+          <table class="data-table">
+            <thead><tr><th>Estado</th><th>Programa</th><th>Contactos</th><th>Admitidos</th><th>Interesados</th><th>Seguimiento</th><th>Coordinador</th></tr></thead>
+            <tbody id="maestríasBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="sec-contactos" class="section">
+      <div class="panel">
+        <div class="panel-title">Todos los contactos</div>
+        <input type="text" id="searchInput" placeholder="Buscar por nombre, maestría o coordinador..." style="width:100%;margin-bottom:12px" oninput="filterContacts()">
+        <div style="overflow-x:auto">
+          <table class="data-table">
+            <thead><tr><th>#</th><th>Nombre</th><th>Programa</th><th>Estatus</th><th>Coordinador</th><th>Fecha</th></tr></thead>
+            <tbody id="contactsBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="sec-coordinadores" class="section">
+      <div class="panel">
+        <div class="panel-title">Carga por coordinador</div>
+        <div id="coordPanel"></div>
+      </div>
+    </div>
+
+    <div id="sec-tendencia" class="section">
+      <div class="grid2">
+        <div class="panel">
+          <div class="panel-title">Estatus acumulado</div>
+          <div style="position:relative;height:260px"><canvas id="donutChart"></canvas></div>
+        </div>
+        <div class="panel">
+          <div class="panel-title">Análisis de conversión</div>
+          <div id="convAnalysis" style="font-size:11px;color:var(--text2);line-height:1.8"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="scanline">
+  <span id="scanText">SYS: PUCMM-PG-CAPTACION | INICIANDO</span>
+  <span id="scanAnim">|</span>
+</div>
+
+    <span id="aiToggle">^</span>
+  </div>
+  <div id="aiMessages">
+    <div class="msg ai">Hola! Soy tu asistente de captación PUCMM. Conecto el Excel y respondo preguntas sobre maestrías y contactos.</div>
+  </div>
+  <div class="ai-chips">
+    <span class="ai-chip" onclick="askAI('Cual maestria tiene mejor tasa de conversión?')">Mejor conversión</span>
+    <span class="ai-chip" onclick="askAI('Que coordinador necesita mas apoyo?')">Coordinadores criticos</span>
+    <span class="ai-chip" onclick="askAI('Dame un resumen ejecutivo del estado actual')">Resumen ejecutivo</span>
+    <span class="ai-chip" onclick="askAI('Cuales maestrías estan en rojo y que recomiendas?')">Acciónes urgentes</span>
+  </div>
+  <div id="aiInputRow">
+    <input type="text" id="aiInput" placeholder="Pregunta algo sobre los datos..." onkeydown="if(event.key==='Enter')sendAI()">
+    <button id="aiSend" onclick="sendAI()">ENVIAR</button>
+  </div>
+</div>
+
+<script>
+var APP={cfg:null,data:{contacts:[],programs:[]},charts:{},semFilter:'all'};
+
+function loadConfig(){var s=localStorage.getItem('pucmm_v2_cfg');if(s)APP.cfg=JSON.parse(s);}
+
+function saveConfig(){
+  var url=document.getElementById('cfgShareUrl').value.trim();
+  var key=document.getElementById('cfgApiKey').value.trim();
+  document.getElementById('setupError').style.display='none';
+  if(!url){showError('Pega el link de OneDrive primero.');return;}
+  if(!url.includes('http')){showError('La URL no es valida. Debe empezar con https://');return;}
+  APP.cfg={shareUrl:url,apiKey:key};
+  localStorage.setItem('pucmm_v2_cfg',JSON.stringify(APP.cfg));
+  document.getElementById('setupScreen').style.display='none';
+  loadFromOneDrive();
+}
+
+function showError(msg){var el=document.getElementById('setupError');el.textContent='Error: '+msg;el.style.display='block';}
+
+function showSetup(){
+  var cfg=APP.cfg||{};
+  document.getElementById('cfgShareUrl').value=cfg.shareUrl||'';
+  document.getElementById('cfgApiKey').value=cfg.apiKey||'';
+  document.getElementById('setupError').style.display='none';
+  document.getElementById('setupScreen').style.display='block';
+  document.getElementById('loadingScreen').style.display='none';
+  document.querySelectorAll('.section').forEach(function(s){s.classList.remove('active');});
+}
+
+async function loadFromOneDrive(){
+  if(!APP.cfg||!APP.cfg.shareUrl){showSetup();return;}
+  setLoading(true,'CARGANDO DATOS DESDE GITHUB...');
+  try{
+    // Add cache-busting to always get latest file
+    var url=APP.cfg.shareUrl+'?t='+Date.now();
+    var resp=await fetch(url);
+    if(!resp.ok)throw new Error('No se pudo cargar el archivo (Error '+resp.status+'). Verifica que datos.xlsm este subido al repo de GitHub.');
+    var buffer=await resp.arrayBuffer();
+    setLoading(true,'PROCESANDO DATOS...');
+    parseExcel(buffer);
+  }catch(e){
+    setLoading(false);
+    showSetup();
+    showError(e.message);
+    document.getElementById('connStatus').textContent='ERROR';
+    document.getElementById('connStatus').style.color='var(--red)';
+  }
+}
+
+function parseExcel(buffer){
+  try{
+    var wb=XLSX.read(buffer,{type:'array',cellDates:true});
+    var sheetNames=wb.SheetNames.map(function(s){return s.toLowerCase();});
+    var ci=sheetNames.findIndex(function(s){return s.includes('contact');});
+    var contactSheet=wb.Sheets[wb.SheetNames[ci>=0?ci:0]];
+    var pi=sheetNames.findIndex(function(s){return s.includes('program')||s.includes('maestr');});
+    var progSheet=pi>=0?wb.Sheets[wb.SheetNames[pi]]:null;
+
+    var raw=XLSX.utils.sheet_to_json(contactSheet,{header:1,defval:''});
+    var headerRow=-1,colMap={};
+    for(var i=0;i<Math.min(raw.length,10);i++){
+      var row=raw[i].map(function(c){return String(c).toLowerCase();});
+      if(row.some(function(c){return c.includes('nombre')||c.includes('program')||c.includes('status')||c.includes('estado');})){
+        headerRow=i;
+        row.forEach(function(c,j){
+          if(c.includes('id')&&!c.includes('correo'))colMap.id=j;
+          if(c.includes('fecha'))colMap.fecha=j;
+          if(c.includes('nombre'))colMap.nombre=j;
+          if(c.includes('program')||c.includes('maestr'))colMap.programa=j;
+          if(c.includes('status')||c.includes('estado')||c.includes('estatus'))colMap.status=j;
+          if(c.includes('coord'))colMap.coord=j;
+          if(c.includes('correo')||c.includes('email'))colMap.correo=j;
+        });
+        break;
+      }
+    }
+
+    var contacts=[];
+    if(headerRow>=0){
+      for(var i=headerRow+1;i<raw.length;i++){
+        var r=raw[i];
+        if(!r||r.every(function(c){return !c;}))continue;
+        var id=colMap.id!==undefined?r[colMap.id]:i;
+        if(!id&&id!==0)continue;
+        contacts.push({
+          id:parseInt(id)||i,
+          fecha:colMap.fecha!==undefined?String(r[colMap.fecha]||''):'',
+          nombre:colMap.nombre!==undefined?String(r[colMap.nombre]||''):'',
+          programa:colMap.programa!==undefined?String(r[colMap.programa]||''):'',
+          status:colMap.status!==undefined?String(r[colMap.status]||''):'',
+          coord:colMap.coord!==undefined?String(r[colMap.coord]||''):'',
+        });
+      }
+    }
+
+    var programs=[];
+    if(progSheet){
+      var praw=XLSX.utils.sheet_to_json(progSheet,{header:1,defval:''});
+      praw.forEach(function(r){
+        var name=String(r[0]||'').trim();
+        if(name&&(name.toLowerCase().includes('maestr')||name.toLowerCase().includes('doctor')||name.toLowerCase().includes('especial'))){
+          programs.push({name:name,coord:String(r[1]||'')});
+        }
+      });
+    }
+
+    if(contacts.length===0&&programs.length===0)throw new Error('No se encontraron datos. Verifica que las hojas se llamen CONTACTOS y PROGRAMAS.');
+    buildState(contacts,programs);
+  }catch(e){
+    setLoading(false);showSetup();showError('Error al leer el Excel: '+e.message);
+  }
+}
+
+function getSem(cs){
+  if(cs.length===0)return 'r';
+  var adm=cs.filter(function(c){return c.status==='Admitido';}).length;
+  var int=cs.filter(function(c){return c.status==='Interesado';}).length;
+  var score=adm*2+int;
+  if(score>=1)return 'g';
+  var no=cs.filter(function(c){return c.status==='No interesado';}).length;
+  if(no>0&&no===cs.length)return 'r';
+  return 'a';
+}
+
+function buildState(contacts,programs){
+  APP.data.contacts=contacts;
+  var byProg={};
+  contacts.forEach(function(c){
+    if(!c.programa||c.programa==='undefined')return;
+    if(!byProg[c.programa])byProg[c.programa]={coord:c.coord,contacts:[]};
+    byProg[c.programa].contacts.push(c);
+  });
+  programs.forEach(function(p){
+    if(!byProg[p.name])byProg[p.name]={coord:p.coord,contacts:[]};
+  });
+  var order={g:0,a:1,r:2};
+  APP.data.programs=Object.keys(byProg).map(function(k){
+    var cs=byProg[k].contacts;
+    return{
+      name:k,coord:byProg[k].coord,contacts:cs,total:cs.length,
+      admitted:cs.filter(function(c){return c.status==='Admitido';}).length,
+      interested:cs.filter(function(c){return c.status==='Interesado';}).length,
+      follow:cs.filter(function(c){return c.status.includes('Seguimiento')||c.status.includes('Duda')||c.status.includes('Contactar');}).length,
+      no:cs.filter(function(c){return c.status==='No interesado';}).length,
+      sem:getSem(cs)
+    };
+  }).sort(function(a,b){return (order[a.sem]-order[b.sem])||b.total-a.total;});
+
+  setLoading(false);
+  renderAll();
+  document.getElementById('lastSync').textContent=new Date().toLocaleTimeString('es-DO');
+  document.getElementById('connStatus').textContent='CONECTADO - '+contacts.length+' contactos';
+  document.getElementById('connStatus').style.color='var(--green)';
+  updateScanline();
+  showSection('overview',document.querySelector('.nav-item'));
+}
+
+function renderAll(){renderKPIs();renderSemList();renderStatusGrid();renderMaestríasTable();renderContactsTable();renderCoordPanel();renderCharts();renderConvAnalysis();}
+
+function renderKPIs(){
+  var c=APP.data.contacts,p=APP.data.programs;
+  var adm=c.filter(function(x){return x.status==='Admitido';}).length;
+  var int=c.filter(function(x){return x.status==='Interesado';}).length;
+  var fol=c.filter(function(x){return x.status.includes('Seguimiento')||x.status.includes('Duda');}).length;
+  var nc=p.filter(function(x){return x.total===0;}).length;
+  var conv=c.length?Math.round(((adm+int)/c.length)*100):0;
+  document.getElementById('kpiRow').innerHTML=[
+    {lbl:'Total contactos',val:c.length,delta:'datos cargados',dc:'delta-up',cl:'c-blue'},
+    {lbl:'Admitidos',val:adm,delta:Math.round((adm/(c.length||1))*100)+'% del total',dc:'delta-up',cl:'c-green'},
+    {lbl:'Interesados',val:int,delta:Math.round((int/(c.length||1))*100)+'% del total',dc:'delta-up',cl:'c-cyan'},
+    {lbl:'En seguimiento',val:fol,delta:'requieren contacto',dc:'delta-warn',cl:'c-amber'},
+    {lbl:'Sin contacto',val:nc,delta:'acción urgente',dc:'delta-down',cl:'c-red'},
+    {lbl:'Tasa conversión',val:conv+'%',delta:'adm + interesados',dc:'delta-up',cl:'c-purple'},
+  ].map(function(k){return '<div class="kpi '+k.cl+'"><div class="kpi-lbl">'+k.lbl+'</div><div class="kpi-val">'+k.val+'</div><div class="kpi-delta '+k.dc+'">'+k.delta+'</div></div>';}).join('');
+}
+
+function renderSemList(){
+  var f=APP.semFilter;
+  var list=f==='all'?APP.data.programs:APP.data.programs.filter(function(p){return p.sem===f;});
+  document.getElementById('semList').innerHTML=list.slice(0,25).map(function(p){
+    return '<div class="sem-item" onclick="jumpToMaestria(\''+p.name.replace(/'/g,"\\'")+'\')">'+'<span class="sem-dot dot-'+p.sem+'"></span><span class="sem-name">'+p.name+'</span><span class="sem-cnt">'+p.total+'</span></div>';
+  }).join('');
+}
+
+function filterSem(f,btn){APP.semFilter=f;document.querySelectorAll('.sfbtn').forEach(function(b){b.classList.remove('on');});btn.classList.add('on');renderSemList();}
+
+function renderStatusGrid(){
+  var c=APP.data.contacts;
+  var rows=[
+    {lbl:'Admitidos',n:c.filter(function(x){return x.status==='Admitido';}).length,col:'var(--green)'},
+    {lbl:'Interesados',n:c.filter(function(x){return x.status==='Interesado';}).length,col:'var(--cyan)'},
+    {lbl:'Seguimiento',n:c.filter(function(x){return x.status.includes('Seguimiento')||x.status.includes('Duda');}).length,col:'var(--amber)'},
+    {lbl:'No interesado',n:c.filter(function(x){return x.status==='No interesado';}).length,col:'var(--red)'},
+    {lbl:'En espera',n:c.filter(function(x){return x.status.toLowerCase().includes('espera');}).length,col:'var(--purple)'},
+    {lbl:'Pendiente',n:c.filter(function(x){return x.status.toLowerCase().includes('pendiente');}).length,col:'var(--blue)'},
+  ];
+  document.getElementById('statusGrid').innerHTML=rows.map(function(s){return '<div class="scard"><div class="scard-n" style="color:'+s.col+'">'+s.n+'</div><div class="scard-l">'+s.lbl+'</div></div>';}).join('');
+}
+
+function renderMaestríasTable(){
+  document.getElementById('maestríasBody').innerHTML=APP.data.programs.map(function(p){
+    return '<tr><td><span class="tag tag-'+p.sem+'">'+(p.sem==='g'?'Verde':p.sem==='a'?'Amarillo':'Rojo')+'</span></td><td style="max-width:240px;font-size:10px">'+p.name+'</td><td style="text-align:center;font-weight:700">'+p.total+'</td><td style="text-align:center;color:var(--green)">'+p.admitted+'</td><td style="text-align:center;color:var(--cyan)">'+p.interested+'</td><td style="text-align:center;color:var(--amber)">'+p.follow+'</td><td style="font-size:10px;color:var(--text3)">'+p.coord+'</td></tr>';
+  }).join('');
+}
+
+function renderContactsTable(filter){
+  var cs=APP.data.contacts;
+  if(filter)cs=cs.filter(function(c){return c.nombre.toLowerCase().includes(filter)||c.programa.toLowerCase().includes(filter)||c.coord.toLowerCase().includes(filter)||c.status.toLowerCase().includes(filter);});
+  var cls=function(s){return s==='Admitido'?'tag-g':s==='Interesado'?'tag-b':s==='No interesado'?'tag-r':'tag-a';};
+  document.getElementById('contactsBody').innerHTML=cs.map(function(c){return '<tr><td>'+c.id+'</td><td>'+c.nombre+'</td><td style="font-size:10px;max-width:200px">'+c.programa+'</td><td><span class="tag '+cls(c.status)+'">'+c.status+'</span></td><td style="font-size:10px">'+c.coord+'</td><td style="font-size:10px">'+(c.fecha||'--')+'</td></tr>';}).join('');
+}
+
+function filterContacts(){var q=document.getElementById('searchInput').value.toLowerCase();renderContactsTable(q||null);}
+
+function renderTopCoords(){
+  var map={};
+  APP.data.contacts.forEach(function(c){
+    var coord=(c.coord||'Sin asignar').split('/')[0].trim();
+    if(!map[coord])map[coord]={name:coord,total:0,admitted:0,interested:0,follow:0,no:0};
+    map[coord].total++;
+    if(c.status==='Admitido')map[coord].admitted++;
+    if(c.status==='Interesado')map[coord].interested++;
+    if(c.status.includes('Seguimiento')||c.status.includes('Duda'))map[coord].follow++;
+    if(c.status==='No interesado')map[coord].no++;
+  });
+  var sorted=Object.values(map).filter(function(x){return x.total>0;}).sort(function(a,b){return b.total-a.total;});
+  var max=sorted.length?sorted[0].total:1;
+  var panel=document.getElementById('topCoordsPanel');
+  if(!panel)return;
+  panel.innerHTML=sorted.map(function(c,i){
+    var conv=Math.round(((c.admitted+c.interested)/c.total)*100);
+    var barColor=conv>=50?'var(--green)':conv>=25?'var(--amber)':'var(--red)';
+    var medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
+    return '<div style="display:grid;grid-template-columns:28px 140px 1fr 80px 60px;align-items:center;gap:10px;margin-bottom:8px;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px">'
+      +'<span style="font-size:16px;text-align:center">'+medal+'</span>'
+      +'<span style="font-size:12px;color:var(--text);font-weight:'+(i<3?'700':'400')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+c.name+'</span>'
+      +'<div style="height:14px;background:var(--bg3);border-radius:3px;overflow:hidden">'
+        +'<div style="width:'+Math.round((c.total/max)*100)+'%;height:100%;background:'+barColor+';border-radius:3px"></div>'
+      +'</div>'
+      +'<div style="text-align:center">'
+        +'<span style="font-size:12px;font-weight:700;color:var(--text)">'+c.total+'</span>'
+        +'<span style="font-size:10px;color:var(--text3)"> contactos</span>'
+      +'</div>'
+      +'<div style="text-align:center;background:'+barColor+'22;border-radius:5px;padding:3px 6px">'
+        +'<span style="font-size:12px;font-weight:700;color:'+barColor+'">'+conv+'%</span>'
+      +'</div>'
+    +'</div>';
+  }).join('');
+}
+
+function renderCoordPanel(){
+  var map={};
+  APP.data.contacts.forEach(function(c){
+    var coord=(c.coord||'Sin asignar').split('/')[0].trim();
+    if(!map[coord])map[coord]={name:coord,total:0,admitted:0,interested:0};
+    map[coord].total++;
+    if(c.status==='Admitido')map[coord].admitted++;
+    if(c.status==='Interesado')map[coord].interested++;
+  });
+  var sorted=Object.values(map).filter(function(x){return x.total>0;}).sort(function(a,b){return b.total-a.total;});
+  var max=sorted.length?sorted[0].total:1;
+  document.getElementById('coordPanel').innerHTML=sorted.map(function(c){
+    return '<div class="hbar-row"><span class="hbar-name">'+c.name+'</span><div class="hbar-outer"><div class="hbar-fill" style="width:'+Math.round((c.total/max)*100)+'%;background:var(--bg4)"><span class="hbar-pct">'+c.total+'</span></div></div><span class="hbar-num">'+Math.round(((c.admitted+c.interested)/c.total)*100)+'%</span></div>';
+  }).join('');
+}
+
+function renderCharts(){
+  function destroy(id){if(APP.charts[id]){APP.charts[id].destroy();delete APP.charts[id];}}
+  var progs=APP.data.programs.filter(function(p){return p.total>0;}).slice(0,12);
+  destroy('bar');
+  APP.charts.bar=new Chart(document.getElementById('barChart'),{
+    type:'bar',
+    data:{labels:progs.map(function(p){return p.name.length>22?p.name.slice(0,22)+'...':p.name;}),
+      datasets:[{data:progs.map(function(p){return p.total;}),
+        backgroundColor:progs.map(function(p){return p.sem==='g'?'#4ade8040':p.sem==='a'?'#fbbf2440':'#f8717140';}),
+        borderColor:progs.map(function(p){return p.sem==='g'?'#4ade80':p.sem==='a'?'#fbbf24':'#f87171';}),
+        borderWidth:1,borderRadius:3}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{ticks:{color:'#475569',font:{size:9}},grid:{color:'#1e293b'}},y:{ticks:{color:'#94a3b8',font:{size:9}},grid:{display:false}}}}
+  });
+  var n=APP.data.contacts.length,wks=['S1','S2','S3','S4','S5','S6','S7','S8'];
+  destroy('line');
+  APP.charts.line=new Chart(document.getElementById('lineChart'),{
+    type:'line',
+    data:{labels:wks,datasets:[
+      {label:'Contactos',data:wks.map(function(_,i){return Math.round(n*(i+1)/8);}),borderColor:'#4fa3e8',backgroundColor:'transparent',tension:.4,pointBackgroundColor:'#4fa3e8',pointRadius:3},
+      {label:'Meta',data:wks.map(function(_,i){return Math.round(APP.data.programs.length*2*(i+1)/8);}),borderColor:'#1e3a5f',backgroundColor:'transparent',borderDash:[4,3],pointRadius:0}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{ticks:{color:'#475569',font:{size:9}},grid:{color:'#1e293b'}},y:{ticks:{color:'#475569',font:{size:9}},grid:{color:'#1e293b'}}}}
+  });
+  var áreas={'Derecho':0,'Negocios':0,'Odontología':0,'Diseño/Arq':0,'Salud':0,'Tecnología':0,'Otros':0};
+  APP.data.programs.forEach(function(p){
+    var nm=p.name.toLowerCase();
+    if(nm.includes('derecho')||nm.includes('penal')||nm.includes('tribut')||nm.includes('contrat')||nm.includes('constituc')||nm.includes('procedim')||nm.includes('trabajo'))áreas['Derecho']++;
+    else if(nm.includes('gesti')||nm.includes('empresa')||nm.includes('finanz')||nm.includes('bancaria')||nm.includes('mercados')||nm.includes('tesoreria')||nm.includes('cadena')||nm.includes('alimentaci'))áreas['Negocios']++;
+    else if(nm.includes('odonto')||nm.includes('periodoncia')||nm.includes('prostod')||nm.includes('bucal')||nm.includes('implant')||nm.includes('temporomandib')||nm.includes('odontopediat'))áreas['Odontología']++;
+    else if(nm.includes('diseno')||nm.includes('arqui')||nm.includes('urbana')||nm.includes('cinemato')||nm.includes('audiovisual')||nm.includes('construccion')||nm.includes('ferrov'))áreas['Diseño/Arq']++;
+    else if(nm.includes('psico')||nm.includes('neuro')||nm.includes('patolog')||nm.includes('lenguaje')||nm.includes('salud')||nm.includes('seguridad social'))áreas['Salud']++;
+    else if(nm.includes('ciberseg')||nm.includes('tecnol')||nm.includes('sistem'))áreas['Tecnología']++;
+    else áreas['Otros']++;
+  });
+  var areaColorMap={
+    'Derecho':'#ef4444',
+    'Negocios':'#d97706',
+    'Odontología':'#fbbf24',
+    'Diseño/Arq':'#a78bfa',
+    'Salud':'#f59e0b',
+    'Tecnología':'#3b82f6',
+    'Otros':'#64748b'
+  };
+  var areaKeys=Object.keys(áreas).filter(function(k){return áreas[k]>0;});
+  destroy('area');
+  APP.charts.area=new Chart(document.getElementById('areaChart'),{
+    type:'doughnut',
+    data:{labels:areaKeys.map(function(k){return k+' ('+áreas[k]+')';}),
+      datasets:[{data:areaKeys.map(function(k){return áreas[k];}),
+        backgroundColor:areaKeys.map(function(k){return areaColorMap[k]||'#64748b';}),
+        borderWidth:0,hoverOffset:4}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:true,position:'right',labels:{color:'#e2e8f0',font:{size:11},boxWidth:12,padding:8}}}}
+  });
+  var c=APP.data.contacts;
+  destroy('donut');
+  APP.charts.donut=new Chart(document.getElementById('donutChart'),{
+    type:'doughnut',
+    data:{labels:['Admitidos','Interesados','Seguimiento','No interesado','En espera','Pendiente'],
+      datasets:[{data:[
+        c.filter(function(x){return x.status==='Admitido';}).length,
+        c.filter(function(x){return x.status==='Interesado';}).length,
+        c.filter(function(x){return x.status.includes('Seguimiento')||x.status.includes('Duda');}).length,
+        c.filter(function(x){return x.status==='No interesado';}).length,
+        c.filter(function(x){return x.status.toLowerCase().includes('espera');}).length,
+        c.filter(function(x){return x.status.toLowerCase().includes('pendiente')||x.status.toLowerCase().includes('contactar');}).length,
+      ],backgroundColor:['#4ade80','#22d3ee','#fbbf24','#f87171','#a78bfa','#4fa3e8'],borderWidth:0,hoverOffset:4}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'60%',
+      plugins:{legend:{display:true,position:'right',labels:{color:'#94a3b8',font:{size:10},boxWidth:10,padding:6}}}}
+  });
+}
+
+function renderConvAnalysis(){
+  var c=APP.data.contacts,p=APP.data.programs;
+  var adm=c.filter(function(x){return x.status==='Admitido';}).length;
+  var int=c.filter(function(x){return x.status==='Interesado';}).length;
+  var conv=c.length?Math.round(((adm+int)/c.length)*100):0;
+  var zeros=p.filter(function(x){return x.total===0;}).length;
+  var top=p.find(function(x){return x.sem==='g'&&x.total>0;});
+  var fol=c.filter(function(x){return x.status.includes('Duda')||x.status.includes('Seguimiento');}).length;
+  document.getElementById('convAnalysis').innerHTML='<div style="margin-bottom:14px;padding:12px;background:var(--bg);border-radius:6px;border:1px solid var(--border)"><div style="font-size:28px;font-weight:700;color:var(--green)">'+conv+'%</div><div style="font-size:10px;color:var(--text3);margin-top:2px">TASA DE CONVERSIÓN GLOBAL</div></div><div style="display:flex;flex-direction:column;gap:8px"><div style="padding:10px;background:var(--bg);border-radius:5px;border-left:3px solid var(--green)"><div style="font-size:10px;color:var(--text3)">Mejor programa</div><div style="font-size:11px;color:var(--text);margin-top:2px">'+(top?top.name+' ('+top.total+' contactos)':'--')+'</div></div><div style="padding:10px;background:var(--bg);border-radius:5px;border-left:3px solid var(--red)"><div style="font-size:10px;color:var(--text3)">Programas sin contacto</div><div style="font-size:11px;color:var(--red);margin-top:2px">'+zeros+' programas requieren captación urgente</div></div><div style="padding:10px;background:var(--bg);border-radius:5px;border-left:3px solid var(--amber)"><div style="font-size:10px;color:var(--text3)">Recomendación</div><div style="font-size:11px;color:var(--text2);margin-top:2px;line-height:1.6">Priorizar los '+fol+' contactos en seguimiento. Potencial de elevar conversión al '+Math.min(100,conv+15)+'%.</div></div></div>';
+}
+
+function showSection(id,el){
+  document.querySelectorAll('.section').forEach(function(s){s.classList.remove('active');});
+  var sec=document.getElementById('sec-'+id);if(sec)sec.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});
+  if(el)el.classList.add('active');
+}
+
+function jumpToMaestria(name){
+  showSection('maestrías',document.querySelectorAll('.nav-item')[1]);
+  setTimeout(function(){document.querySelectorAll('#maestríasBody tr').forEach(function(r){r.style.background=r.textContent.includes(name.slice(0,20))?'var(--bg4)':'';});},100);
+}
+
+function setLoading(on,msg){
+  document.getElementById('loadingScreen').style.display=on?'block':'none';
+  document.getElementById('setupScreen').style.display='none';
+  if(!on&&APP.data.contacts.length>0)showSection('overview',document.querySelector('.nav-item'));
+  if(msg)document.getElementById('loadMsg').textContent=msg;
+}
+
+function updateScanline(){
+  var p=APP.data.programs,c=APP.data.contacts;
+  var conv=c.length?Math.round(((c.filter(function(x){return x.status==='Admitido';}).length+c.filter(function(x){return x.status==='Interesado';}).length)/c.length)*100):0;
+  document.getElementById('scanText').textContent='PUCMM-PG | CONTACTOS: '+c.length+' | PROGRAMAS: '+p.length+' | VERDE: '+p.filter(function(x){return x.sem==='g';}).length+' | AMARILLO: '+p.filter(function(x){return x.sem==='a';}).length+' | ROJO: '+p.filter(function(x){return x.sem==='r';}).length+' | CONV: '+conv+'%';
+}
+
+function loadDemoData(){
+  document.getElementById('setupScreen').style.display='none';
+  var contacts=[
+    {id:1,fecha:'19/05/2026',nombre:'Juan Perez',programa:'Maestria en Metodologia y Ciencias Aplicadas al Entrenamiento Deportivo',status:'Admitido',coord:'Alexis Borges'},
+    {id:2,fecha:'19/05/2026',nombre:'Maria Rodriguez',programa:'Maestria en Diseño de Produccion para Cinematografia',status:'No interesado',coord:'Domingo Abreu'},
+    {id:3,fecha:'19/05/2026',nombre:'Carlos Fernandez',programa:'Maestria en Narrativa Audiovisual y Transmedia',status:'Admitido',coord:'Ines de los Santos'},
+    {id:4,fecha:'19/05/2026',nombre:'Ana Martinez',programa:'Maestria en Neuropsicologia Clinica',status:'Interesado',coord:'Ana Estevez'},
+    {id:5,fecha:'19/05/2026',nombre:'Jose Gomez',programa:'Maestria en Ciberseguridad',status:'Contactar para Seguimiento',coord:'Arlene Estevez'},
+    {id:6,fecha:'19/05/2026',nombre:'Laura Sanchez',programa:'Doctorado en Estudios del Espanol',status:'En espera de patrocinio',coord:'Florilena De Jesus'},
+    {id:7,fecha:'19/05/2026',nombre:'Miguel Herrera',programa:'Maestria en Diseño y Planificacion Urbana',status:'Interesado',coord:'Michel Valdez'},
+    {id:8,fecha:'19/05/2026',nombre:'Patricia Diaz',programa:'Maestria en Neuroeducacion Cognitiva',status:'Interesado',coord:'Glorianny Baez'},
+    {id:9,fecha:'19/05/2026',nombre:'Andres Ramirez',programa:'Maestria Movilidad Urbana y Regional',status:'Duda / Realizar Seguimiento',coord:'Michel Valdez'},
+    {id:10,fecha:'19/05/2026',nombre:'Daniela Cruz',programa:'Maestria en Gestion de Riesgo y Tesoreria',status:'No interesado',coord:'Isabel Sanchez'},
+    {id:11,fecha:'19/05/2026',nombre:'Luis Pena',programa:'Maestria en Gestion Bancaria y Financiera',status:'Interesado',coord:'Isabel Sanchez'},
+    {id:12,fecha:'19/05/2026',nombre:'Sofia Castillo',programa:'Maestria en Mercados Financieros',status:'Duda / Realizar Seguimiento',coord:'Isabel Sanchez'},
+    {id:13,fecha:'19/05/2026',nombre:'Ricardo Nunez',programa:'Maestria en Diseño Arquitectonico',status:'Duda / Realizar Seguimiento',coord:'Jaime Sued'},
+    {id:14,fecha:'19/05/2026',nombre:'Elena Morales',programa:'Maestria en Periodoncia e Implantologia Oral',status:'Admitido',coord:'Aimee Cuesta'},
+    {id:15,fecha:'19/05/2026',nombre:'Javier Lopez',programa:'Maestria en Prostodoncia e Implantologia Oral',status:'Admitido',coord:'Kenia Rodriguez'},
+    {id:16,fecha:'19/05/2026',nombre:'Camila Torres',programa:'Maestria en Rehabilitacion Bucal',status:'Admitido',coord:'Nelson Orsini'},
+    {id:17,fecha:'19/05/2026',nombre:'Fernando Reyes',programa:'Maestria en Odontopediatria',status:'Pendiente de admisión',coord:'Zaida Jimenez'},
+    {id:18,fecha:'19/05/2026',nombre:'Gabriela Ortiz',programa:'Especialidad en Trastornos Temporomandibular',status:'Duda / Realizar Seguimiento',coord:'Elba Estrella'},
+    {id:19,fecha:'19/05/2026',nombre:'Eduardo Vargas',programa:'Maestria en Gestion de Sistemas Ferroviarios',status:'En espera de patrocinio',coord:'Jesus Ramirez'},
+    {id:20,fecha:'19/05/2026',nombre:'Valeria Medina',programa:'Maestria en Gestion de la Cadena de Suministro',status:'Duda / Realizar Seguimiento',coord:'Luis Germosen'},
+    {id:21,fecha:'19/05/2026',nombre:'Roberto Jimenez',programa:'Maestria en Direccion de Comunicación Corporativa',status:'Duda / Realizar Seguimiento',coord:'Magdalena Duran'},
+    {id:22,fecha:'19/05/2026',nombre:'Natalia Cabrera',programa:'Maestria en Derecho Tributario',status:'Interesado',coord:'Pascal Pena'},
+    {id:23,fecha:'19/05/2026',nombre:'Diego Santana',programa:'Maestria en Derecho del Trabajo y Seguridad Social',status:'Contactar para Seguimiento',coord:'Miguelina Urena'},
+    {id:24,fecha:'19/05/2026',nombre:'Paola Vega',programa:'Maestria en Gestion de Empresas Finanzas',status:'No interesado',coord:'Natalia Concepcion'},
+    {id:25,fecha:'19/05/2026',nombre:'Cristian Acosta',programa:'Maestria en Gestion de Empresas Habilidades Directivas',status:'Interesado',coord:'Natalia Concepcion'},
+    {id:26,fecha:'19/05/2026',nombre:'Veronica Paredes',programa:'Maestria en Gestion de Empresas Estrategia',status:'Interesado',coord:'Natalia Concepcion'},
+    {id:27,fecha:'19/05/2026',nombre:'Samuel Molina',programa:'Maestria en Patologia del Lenguaje y Habla',status:'No interesado',coord:'Sor Salcedo'},
+    {id:28,fecha:'19/05/2026',nombre:'Karina Paulino',programa:'Maestria en Administracion de la Construccion',status:'Interesado',coord:'Pedro Reyes'},
+    {id:29,fecha:'19/05/2026',nombre:'Hector Valdez',programa:'Maestria en Gerencia en Servicios de Alimentacion',status:'Duda / Realizar Seguimiento',coord:'Yahaira Sanchez'},
+    {id:30,fecha:'19/05/2026',nombre:'Alicia Rosario',programa:'Doctorado en Historia del Caribe',status:'Admitido',coord:'Mukien Sang'},
+    {id:31,fecha:'19/05/2026',nombre:'Tomas Guerrero',programa:'Maestria en Derecho de los Mercados Financieros',status:'En espera de patrocinio',coord:'Miguelina Urena'},
+    {id:32,fecha:'19/05/2026',nombre:'Maria Santos',programa:'Maestria en Metodologia y Ciencias Aplicadas al Entrenamiento Deportivo',status:'Interesado',coord:'Alexis Borges'},
+  ];
+  var programs=[
+    {name:'Maestria Ejecutiva en Direccion de Proyectos',coord:'Marcela Mirabal'},
+    {name:'Maestria en Contrataciones Publicas Estrategicas',coord:'Maribel Justo'},
+    {name:'Maestria en Seguridad Social',coord:'Pascal Pena'},
+    {name:'Maestria en Ciencias Penales',coord:'Miguelina Urena'},
+    {name:'Maestria en Derecho de los Negocios Corporativos',coord:'Miguelina Urena'},
+    {name:'Maestria en Derecho Constitucional y Procesal',coord:'Miguelina Urena'},
+    {name:'Maestria en Procedimiento Civil',coord:'Miguelina Urena'},
+    {name:'Maestria en Relaciones Internacionales',coord:'Stephanie Pou'},
+  ];
+  buildState(contacts,programs);
+  document.getElementById('connStatus').textContent='MODO DEMO';
+  document.getElementById('connStatus').style.color='var(--amber)';
+  document.getElementById('aiPanel').classList.replace('collapsed','expanded');
+  document.getElementById('aiToggle').textContent='v';
+}
+
+
+
+
+async function sendAI(){
+  var input=document.getElementById('aiInput'),q=input.value.trim();
+  if(!q)return;input.value='';
+  var cfg=APP.cfg||{};
+  if(!cfg.apiKey){addMsg('ai','Configura tu API Key de Claude en el panel de configuracion para usar el chat con IA.');return;}
+  addMsg('user',q);
+  var thinking=addMsg('ai','<span style="color:var(--text3)">Analizando...</span>');
+  var c=APP.data.contacts,p=APP.data.programs;
+  var adm=c.filter(function(x){return x.status==='Admitido';}).length;
+  var int=c.filter(function(x){return x.status==='Interesado';}).length;
+  var conv=c.length?Math.round(((adm+int)/c.length)*100):0;
+  var ctx='Datos PUCMM Postgrado ('+new Date().toLocaleDateString('es-DO')+'):\n- Contactos: '+c.length+', Admitidos: '+adm+', Interesados: '+int+'\n- Verde: '+p.filter(function(x){return x.sem==='g';}).length+', Amarillo: '+p.filter(function(x){return x.sem==='a';}).length+', Rojo: '+p.filter(function(x){return x.sem==='r';}).length+'\n- Conversión: '+conv+'%\n- Top: '+p.filter(function(x){return x.total>0;}).slice(0,6).map(function(x){return x.name+'('+x.total+'c,'+x.admitted+'adm)';}).join(' | ')+'\n- Sin contacto: '+p.filter(function(x){return x.total===0;}).map(function(x){return x.name;}).join(', ');
+  try{
+    var r=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':cfg.apiKey,'anthropic-version':'2023-06-01'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:500,
+        system:'Eres el asistente del Centro de Captación de Postgrado de la PUCMM (Republica Dominicana). Responde en espanol, de forma concisa y acciónable. Usa HTML simple si necesitas formato. '+ctx,
+        messages:[{role:'user',content:q}]})
+    });
+    var data=await r.json();
+    thinking.innerHTML=data.content&&data.content[0]?data.content[0].text:'Sin respuesta.';
+  }catch(e){thinking.innerHTML='<span style="color:var(--red)">Error: '+e.message+'</span>';}
+  document.getElementById('aiMessages').scrollTop=9999;
+}
+
+}
+setInterval(function(){document.getElementById('clock').textContent=new Date().toLocaleTimeString('es-DO',{hour12:false});},1000);
+var bl=true;setInterval(function(){document.getElementById('scanAnim').textContent=bl?'|':'-';bl=!bl;},600);
+
+// Always use GitHub URL — no setup needed
+APP.cfg={
+  shareUrl:'https://gabrielferreras.github.io/pucmm-postgrado-dashboard/datos.xlsm',
+  apiKey: (function(){var s=localStorage.getItem('pucmm_v2_cfg');return s?JSON.parse(s).apiKey||'':'';}())
+};
+localStorage.setItem('pucmm_v2_cfg',JSON.stringify(APP.cfg));
+loadFromOneDrive();
+</script>
+</body>
+</html>
